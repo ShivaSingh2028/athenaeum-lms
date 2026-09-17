@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Reports - CollegeLib</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container">
+    <div class="page-title">Library Reports</div>
+    <div class="page-subtitle">Usage statistics and financial summary.</div>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="num" th:text="${totalBooks}"></div>
+            <div class="label">Book Titles</div>
+        </div>
+        <div class="stat-box">
+            <div class="num" th:text="${totalCopies}"></div>
+            <div class="label">Total Copies</div>
+        </div>
+        <div class="stat-box">
+            <div class="num" th:text="${totalUsers}"></div>
+            <div class="label">Users</div>
+        </div>
+        <div class="stat-box">
+            <div class="num" th:text="${issuedCount}"></div>
+            <div class="label">Issued Now</div>
+        </div>
+        <div class="stat-box warn">
+            <div class="num" th:text="${overdueCount}"></div>
+            <div class="label">Overdue</div>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="stat-box">
+            <div class="num" th:text="'₹' + ${finesCollected}"></div>
+            <div class="label">Fines Collected</div>
+        </div>
+        <div class="stat-box warn">
+            <div class="num" th:text="'₹' + ${finesOutstanding}"></div>
+            <div class="label">Fines Outstanding</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; color:var(--navy);">Most Borrowed Books</h3>
+        <table>
+            <thead><tr><th>Book</th><th>Times Borrowed</th></tr></thead>
+            <tbody>
+            <tr th:each="entry : ${mostBorrowed}">
+                <td th:text="${entry.key.title}"></td>
+                <td th:text="${entry.value}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="empty-state" th:if="${#lists.isEmpty(mostBorrowed)}">No borrowing history yet.</div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; color:var(--navy);">Currently Overdue</h3>
+        <table>
+            <thead><tr><th>Book</th><th>Borrower</th><th>Due Date</th></tr></thead>
+            <tbody>
+            <tr th:each="t : ${overdueList}">
+                <td th:text="${t.book.title}"></td>
+                <td th:text="${t.user.name}"></td>
+                <td th:text="${t.dueDate}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="empty-state" th:if="${#lists.isEmpty(overdueList)}">No overdue books. 🎉</div>
+    </div>
+</div>
+</body>
+</html>

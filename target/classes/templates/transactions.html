@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Transactions - CollegeLib</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container">
+    <div class="page-title">Transactions</div>
+    <div class="page-subtitle">All issue and return records across the library.</div>
+
+    <div class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>Book</th><th>User</th><th>Issued</th><th>Due</th><th>Returned</th>
+                <th>Status</th><th>Fine</th><th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="t : ${transactions}">
+                <td th:text="${t.book.title}"></td>
+                <td th:text="${t.user.name}"></td>
+                <td th:text="${t.issueDate}"></td>
+                <td th:text="${t.dueDate}"></td>
+                <td th:text="${t.returnDate != null ? t.returnDate : '—'}"></td>
+                <td>
+                    <span class="badge badge-issued" th:if="${t.status.name() == 'ISSUED' and !t.dueDate.isBefore(T(java.time.LocalDate).now())}">Issued</span>
+                    <span class="badge badge-overdue" th:if="${t.status.name() == 'ISSUED' and t.dueDate.isBefore(T(java.time.LocalDate).now())}">Overdue</span>
+                    <span class="badge badge-returned" th:if="${t.status.name() == 'RETURNED'}">Returned</span>
+                </td>
+                <td>
+                    <span th:if="${t.fineAmount > 0}" th:text="'₹' + ${t.fineAmount} + (${t.finePaid} ? ' (paid)' : ' (unpaid)')"></span>
+                    <span th:if="${t.fineAmount == 0}">—</span>
+                </td>
+                <td>
+                    <form th:if="${t.status.name() == 'ISSUED'}" th:action="@{'/transactions/' + ${t.id} + '/return'}" method="post" style="display:inline;">
+                        <button class="btn btn-primary btn-sm" type="submit">Return</button>
+                    </form>
+                    <form th:if="${t.fineAmount > 0 and !t.finePaid}" th:action="@{'/transactions/' + ${t.id} + '/pay-fine'}" method="post" style="display:inline;">
+                        <button class="btn btn-outline btn-sm" type="submit">Mark Fine Paid</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="empty-state" th:if="${#lists.isEmpty(transactions)}">No transactions recorded yet.</div>
+    </div>
+</div>
+</body>
+</html>
