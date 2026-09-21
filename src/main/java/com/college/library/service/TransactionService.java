@@ -81,6 +81,10 @@ public class TransactionService {
     public List<Transaction> findByUser(User user) {
         return transactionRepository.findByUserOrderByIssueDateDesc(user);
     }
+    public Transaction findById(Long id) {
+        return transactionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + id));
+    }
 
     public List<Transaction> findAllIssued() {
         return transactionRepository.findByStatus(TransactionStatus.ISSUED);

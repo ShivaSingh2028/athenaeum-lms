@@ -8,6 +8,7 @@ import com.college.library.service.UserService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import com.college.library.entity.Transaction;
 
 @Controller
 @RequestMapping("/transactions")
@@ -59,6 +60,18 @@ public class TransactionController {
     public String returnBook(@PathVariable Long id) {
         transactionService.returnBook(id);
         return "redirect:/transactions";
+    }
+    /** Students return their own borrowed book from their dashboard. */
+    @PostMapping("/{id}/self-return")
+    public String selfReturn(@PathVariable Long id, Model model) {
+        Transaction t = transactionService.findById(id);
+        User currentUser = userService.getCurrentUser();
+        if (!t.getUser().getId().equals(currentUser.getId())) {
+            model.addAttribute("error", "You can only return books issued to your own account.");
+            return "redirect:/dashboard";
+        }
+        transactionService.returnBook(id);
+        return "redirect:/dashboard";
     }
 
     @PostMapping("/{id}/pay-fine")

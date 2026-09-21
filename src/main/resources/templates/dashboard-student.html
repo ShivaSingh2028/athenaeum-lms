@@ -16,7 +16,7 @@
         <h3 style="margin-top:0; color:var(--navy);">My Borrowed Books</h3>
         <table>
             <thead>
-            <tr><th>Book</th><th>Issued</th><th>Due</th><th>Status</th><th>Fine</th></tr>
+            <tr><th>Book</th><th>Issued</th><th>Due</th><th>Status</th><th>Fine</th><th>Action</th></tr>
             </thead>
             <tbody>
             <tr th:each="t : ${myLoans}">
@@ -28,6 +28,11 @@
                     <span class="badge badge-returned" th:if="${t.status.name() == 'RETURNED'}">Returned</span>
                 </td>
                 <td th:text="${t.fineAmount > 0 ? '₹' + t.fineAmount : '—'}"></td>
+                <td>
+                    <form th:if="${t.status.name() == 'ISSUED'}" th:action="@{'/transactions/' + ${t.id} + '/self-return'}" method="post">
+                        <button class="btn btn-primary btn-sm" type="submit">Return</button>
+                    </form>
+                </td>
             </tr>
             </tbody>
         </table>
