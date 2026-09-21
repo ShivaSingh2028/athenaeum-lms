@@ -28,9 +28,16 @@ public class TransactionController {
     @GetMapping
     public String list(Model model) {
         model.addAttribute("transactions", transactionService.findAll());
+        model.addAttribute("books", bookService.findAll());
         return "transactions";
     }
-
+    /** A student's own full transaction history, separate from the dashboard's compact view. */
+    @GetMapping("/my")
+    public String myTransactions(Model model) {
+        User user = userService.getCurrentUser();
+        model.addAttribute("transactions", transactionService.findByUser(user));
+        return "my-transactions";
+    }
     /** Student issues a book to themselves. */
     @PostMapping("/issue/{bookId}")
     public String issueSelf(@PathVariable Long bookId, Model model) {
