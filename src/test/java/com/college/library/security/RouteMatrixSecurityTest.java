@@ -31,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {
+        com.college.library.controller.AuthController.class,
         AdminController.class,
         BookController.class,
         CirculationDeskController.class,
