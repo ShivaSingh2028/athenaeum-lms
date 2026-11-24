@@ -18,6 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.college.library.policy.MembershipType;
+import com.college.library.policy.MembershipTypeRepository;
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -33,6 +36,7 @@ public class SystemBootstrapService implements CommandLineRunner {
     private final BookRepository bookRepository;
     private final BookCopyService bookCopyService;
     private final PasswordEncoder passwordEncoder;
+    private final MembershipTypeRepository membershipTypeRepository;
     private final Environment environment;
 
     @Value("${app.bootstrap.initial-admin-password:}")
@@ -44,6 +48,7 @@ public class SystemBootstrapService implements CommandLineRunner {
                                   BookRepository bookRepository,
                                   BookCopyService bookCopyService,
                                   PasswordEncoder passwordEncoder,
+                                  MembershipTypeRepository membershipTypeRepository,
                                   Environment environment) {
         this.tenantRepository = tenantRepository;
         this.tenantSettingsRepository = tenantSettingsRepository;
@@ -51,6 +56,7 @@ public class SystemBootstrapService implements CommandLineRunner {
         this.bookRepository = bookRepository;
         this.bookCopyService = bookCopyService;
         this.passwordEncoder = passwordEncoder;
+        this.membershipTypeRepository = membershipTypeRepository;
         this.environment = environment;
     }
 
@@ -59,6 +65,7 @@ public class SystemBootstrapService implements CommandLineRunner {
     public void run(String... args) {
         bootstrapDefaultTenant();
         bootstrapAdminUser();
+        bootstrapPolicies();
         bootstrapDevSampleCatalog();
     }
 
@@ -104,16 +111,72 @@ public class SystemBootstrapService implements CommandLineRunner {
                 superAdmin.setEmailVerified(true);
                 userRepository.save(superAdmin);
 
+                if (!isProd) {
+                    if (!userRepository.existsByTenantIdAndEmail(TenantContext.DEFAULT_TENANT_ID, "librarian@athenaeum.edu")) {
+                        User librarian = new User();
+                        librarian.setTenantId(TenantContext.DEFAULT_TENANT_ID);
+                        librarian.setName("Head Librarian");
+                        librarian.setEmail("librarian@athenaeum.edu");
+                        librarian.setPassword(passwordEncoder.encode("LibrarianDev@2026!"));
+                        librarian.setRole(Role.LIBRARIAN);
+                        librarian.setEmailVerified(true);
+                        userRepository.save(librarian);
+                    }
+
+                    if (!userRepository.existsByTenantIdAndEmail(TenantContext.DEFAULT_TENANT_ID, "student@athenaeum.edu")) {
+                        User student = new User();
+                        student.setTenantId(TenantContext.DEFAULT_TENANT_ID);
+                        student.setName("Alex Student");
+                        student.setEmail("student@athenaeum.edu");
+                        student.setPassword(passwordEncoder.encode("StudentDev@2026!"));
+                        student.setRole(Role.STUDENT);
+                        student.setEmailVerified(true);
+                        userRepository.save(student);
+                    }
+                }
+
                 log.info("=================================================================");
                 log.info(" ONE-TIME INITIAL ADMIN BOOTSTRAP COMPLETED");
                 log.info(" Username: admin@athenaeum.edu");
                 log.info(" Password: {}", adminPassword);
                 log.info(" Role:     SUPER_ADMIN");
+                if (!isProd) {
+                    log.info(" Dev Librarian: librarian@athenaeum.edu / LibrarianDev@2026!");
+                    log.info(" Dev Student:   student@athenaeum.edu   / StudentDev@2026!");
+                }
                 log.info(" PLEASE CHANGE THIS PASSWORD IMMEDIATELY AFTER INITIAL SIGN-IN!");
                 log.info("=================================================================");
             }
         } finally {
             TenantContext.clear();
+        }
+    }
+
+    private void bootstrapPolicies() {
+        TenantContext.setTenantId(TenantContext.DEFAULT_TENANT_ID);
+        try {
+            seedPolicyIfNotExists("UG", "Undergraduate Student", 4, 14, 2, new BigDecimal("5.00"));
+            seedPolicyIfNotExists("PG", "Postgraduate Student", 6, 21, 3, new BigDecimal("5.00"));
+            seedPolicyIfNotExists("FACULTY", "Faculty Member", 10, 60, 5, new BigDecimal("2.00"));
+            seedPolicyIfNotExists("STUDENT", "General Student", 4, 14, 2, new BigDecimal("5.00"));
+            seedPolicyIfNotExists("MEMBER", "General Member", 3, 14, 2, new BigDecimal("5.00"));
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    private void seedPolicyIfNotExists(String code, String displayName, int maxBooks, int duration, int renewals, BigDecimal fineRate) {
+        if (!membershipTypeRepository.existsByTenantIdAndCode(TenantContext.DEFAULT_TENANT_ID, code)) {
+            MembershipType p = new MembershipType();
+            p.setTenantId(TenantContext.DEFAULT_TENANT_ID);
+            p.setCode(code);
+            p.setDisplayName(displayName);
+            p.setMaxBooksAllowed(maxBooks);
+            p.setLoanDurationDays(duration);
+            p.setRenewalLimit(renewals);
+            p.setFineRatePerDay(fineRate);
+            p.setActive(true);
+            membershipTypeRepository.save(p);
         }
     }
 
