@@ -14,7 +14,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.Optional;
 
 @Controller
-@RequestMapping("/circulation/desk")
+@RequestMapping({"/circulation/desk", "/circulation-desk"})
 public class CirculationDeskController {
 
     private final TransactionService transactionService;

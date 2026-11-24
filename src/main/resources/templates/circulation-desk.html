@@ -116,10 +116,10 @@
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <div th:each="t : ${recentTransactions}" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                            <strong th:text="${t.user.name}">Patron Name</strong>
-                            <span class="badge" th:classappend="${t.status.name() == 'ISSUED' ? 'badge-warning' : 'badge-success'}" th:text="${t.status}"></span>
+                            <strong th:text="${t.user != null ? t.user.name : 'Patron'}">Patron Name</strong>
+                            <span class="badge" th:classappend="${t.status != null and t.status.name() == 'ISSUED' ? 'badge-warning' : 'badge-success'}" th:text="${t.status}"></span>
                         </div>
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);" th:text="${t.book.title}">Book Title</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);" th:text="${t.book != null ? t.book.title : 'Book Title'}">Book Title</div>
                         <div style="font-size: 0.75rem; color: var(--text-muted);" th:text="'Due: ' + ${t.dueDate}">Due Date</div>
                     </div>
                     <div th:if="${recentTransactions.empty}" style="color: var(--text-muted); font-size: 0.85rem;">

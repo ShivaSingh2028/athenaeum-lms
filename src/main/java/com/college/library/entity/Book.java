@@ -124,16 +124,24 @@ public class Book {
     public void setCopies(List<BookCopy> copies) { this.copies = copies; }
 
     public int getTotalCopies() {
-        if (copies != null && !copies.isEmpty()) {
-            return copies.size();
+        try {
+            if (copies != null && !copies.isEmpty()) {
+                return copies.size();
+            }
+        } catch (Exception ignored) {
+            // Fall back to recorded totalCopies if session is closed or collection uninitialized
         }
         return totalCopies;
     }
     public void setTotalCopies(int totalCopies) { this.totalCopies = totalCopies; }
 
     public int getAvailableCopies() {
-        if (copies != null && !copies.isEmpty()) {
-            return (int) copies.stream().filter(c -> c.getStatus() == CopyStatus.AVAILABLE).count();
+        try {
+            if (copies != null && !copies.isEmpty()) {
+                return (int) copies.stream().filter(c -> c.getStatus() == CopyStatus.AVAILABLE).count();
+            }
+        } catch (Exception ignored) {
+            // Fall back to recorded availableCopies if session is closed or collection uninitialized
         }
         return availableCopies;
     }

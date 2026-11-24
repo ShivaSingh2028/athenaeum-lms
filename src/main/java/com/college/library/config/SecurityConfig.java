@@ -30,9 +30,10 @@ public class SecurityConfig {
                     "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html",
                     "/actuator/health", "/error"
                 ).permitAll()
+                .requestMatchers("/admin/policies/**").hasAnyRole("ADMIN", "LIBRARIAN", "SUPER_ADMIN", "LIBRARY_ADMIN")
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN", "LIBRARY_ADMIN")
-                .requestMatchers("/circulation/**").hasAnyRole("ADMIN", "LIBRARIAN", "SUPER_ADMIN", "LIBRARY_ADMIN")
-                .requestMatchers("/barcodes/**").hasAnyRole("ADMIN", "LIBRARIAN", "SUPER_ADMIN", "LIBRARY_ADMIN")
+                .requestMatchers("/circulation/**", "/circulation-desk/**", "/circulation-desk").hasAnyRole("ADMIN", "LIBRARIAN", "SUPER_ADMIN", "LIBRARY_ADMIN")
+                .requestMatchers("/barcodes/**", "/barcode/**").hasAnyRole("ADMIN", "LIBRARIAN", "SUPER_ADMIN", "LIBRARY_ADMIN")
                 .requestMatchers("/books/new", "/books/*/edit", "/books/*/delete", "/books/import-csv", "/books/*/copies/**").hasAnyRole("ADMIN", "LIBRARIAN", "SUPER_ADMIN", "LIBRARY_ADMIN")
                 .requestMatchers("/transactions/my").hasAnyRole("MEMBER", "STUDENT")
                 .requestMatchers("/transactions/**").hasAnyRole("ADMIN", "LIBRARIAN", "SUPER_ADMIN", "LIBRARY_ADMIN")

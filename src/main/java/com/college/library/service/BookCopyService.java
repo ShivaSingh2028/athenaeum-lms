@@ -26,6 +26,10 @@ public class BookCopyService {
         return copyRepository.findByBookIdAndTenantId(bookId, TenantContext.getTenantId());
     }
 
+    public List<BookCopy> findAll() {
+        return copyRepository.findByTenantId(TenantContext.getTenantId());
+    }
+
     public Optional<BookCopy> findByBarcode(String barcode) {
         return copyRepository.findByTenantIdAndBarcode(TenantContext.getTenantId(), barcode.trim());
     }

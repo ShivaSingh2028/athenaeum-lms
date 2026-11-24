@@ -37,7 +37,7 @@
             <a th:href="@{/dashboard}" th:text="#{nav.dashboard}">Dashboard</a>
             <a th:href="@{/catalog}" th:text="#{nav.discovery}">Discovery</a>
             <a th:href="@{/books}" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')" th:text="#{nav.inventory}">Inventory</a>
-            <a th:href="@{/circulation-desk}" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')" th:text="#{nav.frontdesk}">Front Desk</a>
+            <a th:href="@{/circulation/desk}" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')" th:text="#{nav.frontdesk}">Front Desk</a>
             <a th:href="@{/transactions/my}" sec:authorize="hasAnyRole('STUDENT','MEMBER')" th:text="#{nav.myloans}">My Loans</a>
             <a th:href="@{/catalog/wishlist}" sec:authorize="hasAnyRole('STUDENT','MEMBER')" th:text="#{nav.wishlist}">Wishlist</a>
             <a th:href="@{/catalog/purchase-requests}" th:text="#{nav.acquisitions}">Acquisitions</a>

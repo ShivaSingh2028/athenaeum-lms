@@ -70,6 +70,15 @@ public class BarcodeController {
         }
     }
 
+    @GetMapping({"/barcodes/print", "/barcode/print"})
+    public String printGeneralLabels(Model model) {
+        List<BookCopy> copies = bookCopyService.findAll().stream().limit(50).toList();
+        TenantSettings settings = tenantService.getSettings(TenantContext.getTenantId());
+        model.addAttribute("copies", copies);
+        model.addAttribute("settings", settings);
+        return "print-labels";
+    }
+
     @GetMapping("/books/{id}/copies/print-labels")
     public String printCopyLabels(@PathVariable Long id, Model model) {
         Book book = bookService.findById(id);
