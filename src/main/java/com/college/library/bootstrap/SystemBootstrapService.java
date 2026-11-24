@@ -61,7 +61,6 @@ public class SystemBootstrapService implements CommandLineRunner {
     }
 
     @Override
-    @Transactional
     public void run(String... args) {
         bootstrapDefaultTenant();
         bootstrapAdminUser();

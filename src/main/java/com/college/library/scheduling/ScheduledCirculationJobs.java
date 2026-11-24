@@ -54,7 +54,7 @@ public class ScheduledCirculationJobs {
     @Scheduled(cron = "${app.scheduling.overdue-cron:0 0 1 * * ?}")
     @SchedulerLock(name = "processOverdueLoans", lockAtMostFor = "15m", lockAtLeastFor = "1m")
     @Transactional
-    public int processOverdueLoans() {
+    public Integer processOverdueLoans() {
         log.info("[SCHEDULED] Running overdue loans scanner...");
         LocalDate today = LocalDate.now();
         List<Transaction> overdueLoans = transactionRepository.findByStatusAndDueDateBefore(TransactionStatus.ISSUED, today);
@@ -103,7 +103,7 @@ public class ScheduledCirculationJobs {
      */
     @Scheduled(cron = "${app.scheduling.reminders-cron:0 0 7 * * ?}")
     @SchedulerLock(name = "processDueSoonReminders", lockAtMostFor = "10m", lockAtLeastFor = "30s")
-    public int processDueSoonReminders() {
+    public Integer processDueSoonReminders() {
         log.info("[SCHEDULED] Sending upcoming due-date reminders...");
         LocalDate today = LocalDate.now();
         List<Transaction> activeLoans = transactionRepository.findByStatus(TransactionStatus.ISSUED);
@@ -144,7 +144,7 @@ public class ScheduledCirculationJobs {
      */
     @Scheduled(fixedDelayString = "${app.scheduling.outbox-delay-ms:30000}", initialDelay = 10000)
     @SchedulerLock(name = "dispatchEmailOutbox", lockAtMostFor = "5m", lockAtLeastFor = "5s")
-    public int dispatchEmailOutbox() {
+    public Integer dispatchEmailOutbox() {
         return emailOutboxService.processOutbox(50);
     }
 }
