@@ -4,4 +4,8 @@ if "%JAVA_HOME%"=="" (
         set "JAVA_HOME=C:\Program Files\Java\jdk-25"
     )
 )
-"%~dp0.tools\maven\bin\mvn.cmd" -Dmaven.repo.local="%~dp0.tools\m2-repo" %*
+if exist "%~dp0.tools\maven\bin\mvn.cmd" (
+    "%~dp0.tools\maven\bin\mvn.cmd" -Dmaven.repo.local="%~dp0.tools\m2-repo" %*
+) else (
+    mvn %*
+)

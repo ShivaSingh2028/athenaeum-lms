@@ -10,4 +10,8 @@ while [ -h "$PRG" ] ; do
   fi
 done
 DIR=`dirname "$PRG"`
-exec "$DIR/.tools/maven/bin/mvn" "$@"
+if [ -x "$DIR/.tools/maven/bin/mvn" ]; then
+  exec "$DIR/.tools/maven/bin/mvn" "$@"
+else
+  exec mvn "$@"
+fi
