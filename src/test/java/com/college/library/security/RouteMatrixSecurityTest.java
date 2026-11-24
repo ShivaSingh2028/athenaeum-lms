@@ -65,6 +65,12 @@ class RouteMatrixSecurityTest {
     @MockBean
     private ReportService reportService;
 
+    @MockBean
+    private com.college.library.catalog.BulkCatalogService bulkCatalogService;
+
+    @MockBean
+    private com.college.library.policy.PolicyService policyService;
+
     @BeforeEach
     void setup() {
         TenantContext.setTenantId("campus-main");
