@@ -1,49 +1,96 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>My Transactions - CollegeLib</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('My Borrowing Records')}">
+    <title>My Transactions - Athenaeum</title>
 </head>
 <body>
 <div th:replace="~{fragments :: nav}"></div>
 
 <div class="container">
-    <div class="page-title">My Transaction History</div>
-    <div class="page-subtitle">Every book you've issued or returned, past and present.</div>
+    <div class="flex-between">
+        <div>
+            <div class="page-title">My Borrowing Records</div>
+            <div class="page-subtitle">Track your active loans, renewal allowances, and return history.</div>
+        </div>
+        <div>
+            <a th:href="@{/finance/my-fines}" class="btn btn-secondary">💳 My Fines & Fees</a>
+        </div>
+    </div>
+
+    <!-- Feedback messages -->
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
     <div class="card">
         <table>
             <thead>
-            <tr><th>Book</th><th>Issued</th><th>Due</th><th>Returned</th><th>Status</th><th>Fine</th><th>Action</th></tr>
+            <tr>
+                <th>Title & Copy</th>
+                <th>Issued</th>
+                <th>Due Date</th>
+                <th>Returned</th>
+                <th>Status</th>
+                <th>Renewals</th>
+                <th>Fine</th>
+                <th>Actions</th>
+            </tr>
             </thead>
             <tbody>
             <tr th:each="t : ${transactions}">
-                <td th:text="${t.book.title}"></td>
+                <td>
+                    <div style="font-weight: 700; color: var(--color-brand-navy);" th:text="${t.book.title}">Book Title</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" 
+                         th:text="'Barcode: ' + (${t.bookCopy != null ? t.bookCopy.barcode : 'General'})">
+                    </div>
+                </td>
                 <td th:text="${t.issueDate}"></td>
-                <td th:text="${t.dueDate}"></td>
+                <td>
+                    <strong th:classappend="${t.status.name() == 'ISSUED' and t.dueDate.isBefore(T(java.time.LocalDate).now()) ? 'text-danger' : ''}"
+                            th:text="${t.dueDate}">
+                    </strong>
+                </td>
                 <td th:text="${t.returnDate != null ? t.returnDate : '—'}"></td>
                 <td>
-                    <span class="badge badge-issued" th:if="${t.status.name() == 'ISSUED' and !t.dueDate.isBefore(T(java.time.LocalDate).now())}">Issued</span>
-                    <span class="badge badge-overdue" th:if="${t.status.name() == 'ISSUED' and t.dueDate.isBefore(T(java.time.LocalDate).now())}">Overdue</span>
-                    <span class="badge badge-returned" th:if="${t.status.name() == 'RETURNED'}">Returned</span>
+                    <span class="badge" 
+                          th:classappend="${t.status.name() == 'RETURNED' ? 'badge-success' : (t.dueDate.isBefore(T(java.time.LocalDate).now()) ? 'badge-danger' : 'badge-warning')}"
+                          th:text="${t.status.name() == 'ISSUED' and t.dueDate.isBefore(T(java.time.LocalDate).now()) ? 'OVERDUE' : t.status}">
+                    </span>
+                </td>
+                <td th:text="${t.renewalCount}">0</td>
+                <td>
+                    <span th:if="${t.fineAmount > 0}" style="color: var(--accent-danger); font-weight: 700;" th:text="'₹' + ${t.fineAmount}"></span>
+                    <span th:if="${t.fineAmount == 0}" style="color: var(--text-muted);">—</span>
                 </td>
                 <td>
-                    <span th:if="${t.fineAmount > 0}" th:text="'₹' + ${t.fineAmount} + (${t.finePaid} ? ' (paid)' : ' (unpaid)')"></span>
-                    <span th:if="${t.fineAmount == 0}">—</span>
+                    <div style="display: flex; gap: 6px; align-items: center;" th:if="${t.status.name() == 'ISSUED'}">
+                        <!-- Renew Button -->
+                        <form th:action="@{'/transactions/' + ${t.id} + '/renew'}" method="post" style="display:inline; margin:0;">
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.85rem;" type="submit" title="Extend loan period">
+                                🔄 Renew
+                            </button>
+                        </form>
+                        <!-- Self Return -->
+                        <form th:action="@{'/transactions/' + ${t.id} + '/self-return'}" method="post" style="display:inline; margin:0;">
+                            <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.85rem;" type="submit">
+                                Return
+                            </button>
+                        </form>
+                    </div>
+                    <span th:unless="${t.status.name() == 'ISSUED'}" style="color: var(--text-muted); font-size: 0.85rem;">
+                        Completed
+                    </span>
                 </td>
-                <td>
-                    <form th:if="${t.status.name() == 'ISSUED'}" th:action="@{'/transactions/' + ${t.id} + '/self-return'}" method="post">
-                        <button class="btn btn-primary btn-sm" type="submit">Return</button>
-                    </form>
+            </tr>
+            <tr th:if="${transactions.empty}">
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                    You have no loan history. <a th:href="@{/books}">Explore the catalog &rarr;</a>
                 </td>
             </tr>
             </tbody>
         </table>
-        <div class="empty-state" th:if="${#lists.isEmpty(transactions)}">
-            You haven't borrowed anything yet. <a href="/books">Browse the catalog →</a>
-        </div>
     </div>
 </div>
+
+<div th:replace="~{fragments :: footer}"></div>
 </body>
 </html>

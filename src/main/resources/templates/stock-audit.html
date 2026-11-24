@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Stock Audit Terminal')}">
+    <title>Stock Audit - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container" style="max-width:1100px; margin: 2rem auto;">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
+        <div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <h1 class="page-title" style="margin:0;" th:text="${session.sessionName}">Audit Session</h1>
+                <span class="badge" th:classappend="${session.status.name() == 'COMPLETED' ? 'badge-success' : 'badge-warning'}" th:text="${session.status}"></span>
+            </div>
+            <div class="page-subtitle">Scan shelf barcodes to verify inventory presence and identify misplaced or missing items.</div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <a href="/reports" class="btn btn-secondary">← Back to Reports</a>
+            <form th:if="${session.status.name() == 'IN_PROGRESS'}" th:action="@{/reports/stock-audit/{id}/finalize(id=${session.id})}" method="post" onsubmit="return confirm('Finalizing this session will mark all unscanned library copies as MISSING. Proceed?');">
+                <button type="submit" class="btn btn-gold">✓ Finalize & Reconcile Session</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-info" th:if="${scanResult}" th:text="${scanResult}"></div>
+    <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <!-- Audit Counters -->
+    <div class="stats-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-bottom:24px;">
+        <div class="card" style="padding:16px; text-align:center;">
+            <div style="font-size:1.8rem; font-weight:700; color:var(--color-brand-navy);" th:text="${session.scannedCount}">0</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Total Scanned</div>
+        </div>
+        <div class="card" style="padding:16px; text-align:center;">
+            <div style="font-size:1.8rem; font-weight:700; color:var(--color-success);" th:text="${session.verifiedCount}">0</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Verified on Shelf</div>
+        </div>
+        <div class="card" style="padding:16px; text-align:center;">
+            <div style="font-size:1.8rem; font-weight:700; color:var(--color-brand-gold);" th:text="${session.misplacedCount}">0</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Misplaced Shelf</div>
+        </div>
+        <div class="card" style="padding:16px; text-align:center;">
+            <div style="font-size:1.8rem; font-weight:700; color:var(--color-brand-maroon);" th:text="${session.missingCount}">0</div>
+            <div style="font-size:0.8rem; color:var(--color-brand-maroon); text-transform:uppercase; font-weight:600;">Flagged Missing</div>
+        </div>
+    </div>
+
+    <!-- Active Scanning Panel -->
+    <div class="card" th:if="${session.status.name() == 'IN_PROGRESS'}" style="padding:20px; margin-bottom:24px; border:2px dashed var(--color-brand-gold); background:var(--color-surface-hover, #faf8f5);">
+        <h3 style="margin-top:0; color:var(--color-brand-navy);">Shelf Scanner Input (Handheld or Wedge)</h3>
+        <form th:action="@{/reports/stock-audit/{id}/scan(id=${session.id})}" method="post" style="display:flex; gap:12px; align-items:flex-end;">
+            <div style="flex:2;">
+                <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:4px;">Item Barcode</label>
+                <input type="text" name="barcode" id="barcodeInput" placeholder="Scan or enter copy barcode..." required autofocus style="width:100%; font-family:monospace; font-weight:700; font-size:1.1rem; padding:8px 12px;">
+            </div>
+            <div style="flex:2;">
+                <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:4px;">Current Shelf Location Being Audited</label>
+                <input type="text" name="shelfLocation" id="shelfInput" placeholder="e.g. Rack A-1, Stack 4" required style="width:100%; font-size:1rem; padding:8px 12px;">
+            </div>
+            <div style="flex:1;">
+                <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-weight:600;">
+                    Log Copy
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Scanned Log Table -->
+    <div class="card">
+        <h3 style="margin-top:0; color:var(--color-brand-navy);">Audit Log & Reconciliation Records</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>Barcode</th>
+                <th>Title</th>
+                <th>Expected Location</th>
+                <th>Audited Location</th>
+                <th>Status</th>
+                <th>Timestamp</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="e : ${entries}">
+                <td><code th:text="${e.barcode}"></code></td>
+                <td style="font-weight:600;" th:text="${e.bookCopy != null && e.bookCopy.book != null ? e.bookCopy.book.title : 'N/A'}"></td>
+                <td th:text="${e.expectedShelfLocation}"></td>
+                <td th:text="${e.scannedShelfLocation != null ? e.scannedShelfLocation : '—'}"></td>
+                <td>
+                    <span class="badge" 
+                          th:classappend="${e.status.name() == 'VERIFIED' ? 'badge-success' : (e.status.name() == 'MISPLACED' ? 'badge-warning' : 'badge-danger')}" 
+                          th:text="${e.status}">
+                    </span>
+                </td>
+                <td style="font-size:0.8rem; color:var(--text-muted);" th:text="${#temporals.format(e.scannedAt, 'HH:mm:ss')}"></td>
+            </tr>
+            <tr th:if="${entries.empty}">
+                <td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">
+                    No copies scanned in this audit session yet.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+</body>
+</html>

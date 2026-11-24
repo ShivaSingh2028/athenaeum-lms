@@ -1,31 +1,36 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Login - CollegeLib</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+<head th:replace="~{fragments :: head('Login')}">
+    <title>Login - Athenaeum</title>
 </head>
-<body>
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <h1>📚 CollegeLib</h1>
-        <p class="sub">Advanced Library Management System</p>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-app);">
+<div style="width: 100%; max-width: 440px; padding: 20px;">
+    <div class="card" style="padding: 36px 32px; box-shadow: var(--shadow-lg); text-align: center;">
+        <div style="margin-bottom: 20px;">
+            <img th:src="@{/images/logo.svg}" alt="Athenaeum Logo" width="72" height="72" style="border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
+        </div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--color-brand-navy); margin: 0 0 6px 0;">
+            Athenaeum <span style="color: var(--color-brand-gold);">LMS</span>
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0 0 24px 0;">
+            Enterprise Multi-Tenant Library Platform
+        </p>
 
-        <div class="alert alert-error" th:if="${param.error}">Invalid email or password.</div>
-        <div class="alert alert-success" th:if="${param.logout}">You've been logged out.</div>
-        <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
-        <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+        <div class="alert alert-error" th:if="${param.error}" style="text-align: left;">Invalid email or password.</div>
+        <div class="alert alert-success" th:if="${param.logout}" style="text-align: left;">You have been logged out securely.</div>
+        <div class="alert alert-success" th:if="${success}" th:text="${success}" style="text-align: left;"></div>
+        <div class="alert alert-error" th:if="${error}" th:text="${error}" style="text-align: left;"></div>
 
-        <form th:action="@{/login}" method="post">
+        <form th:action="@{/login}" method="post" style="text-align: left;">
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="username" placeholder="you@college.edu" required>
+                <label for="username">Email Address</label>
+                <input type="email" id="username" name="username" placeholder="name@institution.edu" required autofocus>
             </div>
             <div class="form-group">
-                <label>Password</label>
-                <div class="password-wrapper">
-                    <input type="password" name="password" id="password" required>
-                    <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Show password">
+                <label for="password">Password</label>
+                <div style="position: relative;">
+                    <input type="password" id="password" name="password" placeholder="••••••••" required style="padding-right: 42px;">
+                    <button type="button" onclick="togglePassword()" aria-label="Toggle password visibility" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
                         <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
@@ -33,13 +38,20 @@
                     </button>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">Log In</button>
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; margin-top: 8px;">
+                Sign In
+            </button>
         </form>
 
-        <p class="switch">New student? <a href="/register">Create an account</a></p>
-
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-subtle); font-size: 0.875rem; color: var(--text-secondary);">
+            New patron? <a th:href="@{/register}" style="color: var(--color-brand-maroon); font-weight: 600;">Create an account</a>
+        </div>
+    </div>
+    <div style="text-align: center; margin-top: 16px; font-size: 0.8rem; color: var(--text-muted);">
+        Athenaeum Library System &bull; Secure Multi-Tenant Architecture
     </div>
 </div>
+
 <script>
     function togglePassword() {
         const input = document.getElementById('password');

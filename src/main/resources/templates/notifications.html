@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Notifications')}">
+    <title>Notifications - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container" style="max-width:900px; margin: 2rem auto;">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
+        <div>
+            <h1 class="page-title" style="margin:0;">Notification Center</h1>
+            <div class="page-subtitle">Alerts regarding circulation, holds, due dates, and fine payments.</div>
+        </div>
+        <form th:action="@{/notifications/read-all}" method="post" th:if="${unreadCount > 0}">
+            <button type="submit" class="btn btn-secondary">✓ Mark All as Read</button>
+        </form>
+    </div>
+
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+
+    <div class="card" th:if="${notifications.empty}" style="text-align:center; padding:3rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">🔔</div>
+        <h3 style="margin-top:0;">No Notifications</h3>
+        <p style="color:var(--text-muted); max-width:400px; margin:0 auto;">
+            You're all caught up! New alerts regarding your loans, reservations, and receipts will appear here.
+        </p>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px;" th:unless="${notifications.empty}">
+        <div class="card" th:each="n : ${notifications}" 
+             style="padding:16px 20px; border-radius:8px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; transition:all 0.15s ease;"
+             th:styleappend="${!n.isRead ? 'border-left: 4px solid var(--color-brand-gold); background: var(--color-surface-hover, #fbfaf8);' : 'opacity:0.85;'}">
+            
+            <div style="flex:1;">
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+                    <span class="badge" 
+                          th:classappend="${n.category == 'OVERDUE' ? 'badge-danger' : (n.category == 'HOLD' ? 'badge-success' : 'badge-info')}" 
+                          th:text="${n.category}">
+                    </span>
+                    <strong style="color:var(--color-brand-navy); font-size:1rem;" th:text="${n.title}"></strong>
+                    <span th:unless="${n.isRead}" style="background:var(--color-brand-gold); color:#111; font-size:0.7rem; font-weight:700; padding:1px 6px; border-radius:10px;">NEW</span>
+                </div>
+                <div style="font-size:0.9rem; color:var(--text-color); line-height:1.4;" th:text="${n.message}"></div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;" th:text="${#temporals.format(n.createdAt, 'dd MMM yyyy, HH:mm')}"></div>
+            </div>
+
+            <div th:unless="${n.isRead}">
+                <form th:action="@{/notifications/{id}/read(id=${n.id})}" method="post" style="margin:0;">
+                    <button type="submit" class="btn btn-secondary" style="padding:4px 10px; font-size:0.8rem;" title="Mark as read">
+                        Mark read
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+/**
+ * Brand Design Tokens - Enterprise Multi-Tenant Library Platform
+ * Primary Palette:
+ *   Navy:      #1B2A4A
+ *   Gold:      #B98D2E
+ *   Maroon:    #7A1F2B
+ *   Parchment: #F6F3EC
+ */
+
+:root {
+  /* Brand Primitive Colors */
+  --color-brand-navy: #1b2a4a;
+  --color-brand-navy-dark: #0e1726;
+  --color-brand-navy-light: #283d6a;
+  
+  --color-brand-gold: #b98d2e;
+  --color-brand-gold-light: #d4a849;
+  --color-brand-gold-dark: #916b1e;
+  
+  --color-brand-maroon: #7a1f2b;
+  --color-brand-maroon-light: #962837;
+  --color-brand-maroon-dark: #58141d;
+  
+  --color-brand-parchment: #f6f3ec;
+  --color-brand-parchment-light: #fcfbf9;
+  --color-brand-parchment-dark: #ece6d8;
+
+  /* Semantic Theme Variables - Light Mode (Default) */
+  --bg-app: var(--color-brand-parchment);
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #ffffff;
+  --bg-subtle: #f0ebe0;
+  --bg-header: var(--color-brand-navy);
+  --bg-sidebar: #15223c;
+  
+  --text-primary: #1f242e;
+  --text-secondary: #575e6d;
+  --text-muted: #7f8796;
+  --text-on-header: #ffffff;
+  --text-on-brand: #ffffff;
+
+  --border-subtle: #e2dcd0;
+  --border-strong: #cac1b0;
+  --border-focus: var(--color-brand-gold);
+
+  --accent-gold: var(--color-brand-gold);
+  --accent-maroon: var(--color-brand-maroon);
+  --accent-success: #237844;
+  --accent-warning: #d46b08;
+  --accent-danger: #cf1322;
+  --accent-info: #096dd9;
+
+  --shadow-sm: 0 1px 2px rgba(27, 42, 74, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(27, 42, 74, 0.08), 0 2px 4px -1px rgba(27, 42, 74, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(27, 42, 74, 0.1), 0 4px 6px -2px rgba(27, 42, 74, 0.05);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: 'Newsreader', Georgia, Cambria, 'Times New Roman', serif;
+}
+
+/* Dark Mode Tokens */
+[data-theme="dark"],
+.dark {
+  --bg-app: #0e121a;
+  --bg-surface: #161c28;
+  --bg-surface-elevated: #1e2638;
+  --bg-subtle: #242e42;
+  --bg-header: #0a0d14;
+  --bg-sidebar: #0e131d;
+
+  --text-primary: #f3f4f6;
+  --text-secondary: #cbd5e1;
+  --text-muted: #8b9bb4;
+  --text-on-header: #ffffff;
+  --text-on-brand: #ffffff;
+
+  --border-subtle: #2b364c;
+  --border-strong: #3d4c6a;
+  --border-focus: var(--color-brand-gold-light);
+
+  --accent-gold: var(--color-brand-gold-light);
+  --accent-maroon: var(--color-brand-maroon-light);
+  --accent-success: #49aa19;
+  --accent-warning: #e88624;
+  --accent-danger: #f5222d;
+  --accent-info: #177ddc;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}

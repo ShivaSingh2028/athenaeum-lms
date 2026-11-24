@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('My Wishlist')}">
+    <title>My Wishlist - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container" style="max-width:1000px; margin: 2rem auto;">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
+        <div>
+            <h1 class="page-title" style="margin:0;">My Reading Wishlist</h1>
+            <div class="page-subtitle">Track books you want to read. We'll automatically notify you when loan copies become available.</div>
+        </div>
+        <a href="/catalog" class="btn btn-primary">Browse Catalog</a>
+    </div>
+
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+
+    <div class="card" th:if="${wishlistItems.empty}" style="text-align:center; padding:3rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">❤️</div>
+        <h3 style="margin-top:0;">Your Wishlist is Empty</h3>
+        <p style="color:var(--text-muted); max-width:400px; margin:0 auto 1.5rem auto;">
+            Save titles from the discovery catalog to keep track of your reading goals and receive availability alerts.
+        </p>
+        <a href="/catalog" class="btn btn-primary">Explore Books</a>
+    </div>
+
+    <div class="card" th:unless="${wishlistItems.empty}">
+        <table>
+            <thead>
+            <tr>
+                <th>Book</th>
+                <th>Subject</th>
+                <th>Availability</th>
+                <th>Saved On</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="w : ${wishlistItems}">
+                <td>
+                    <div style="font-weight:700; color:var(--color-brand-navy); font-size:1rem;" th:text="${w.book.title}"></div>
+                    <div style="font-size:0.8rem; color:var(--text-muted);" th:text="'by ' + ${w.book.author} + ' &bull; ISBN: ' + ${w.book.isbn}"></div>
+                </td>
+                <td>
+                    <span class="badge badge-info" th:text="${w.book.category}"></span>
+                </td>
+                <td>
+                    <span class="badge" 
+                          th:classappend="${w.book.available ? 'badge-success' : 'badge-danger'}"
+                          th:text="${w.book.available ? 'Available' : 'All On Loan'}">
+                    </span>
+                    <span th:if="${w.notifyOnAvailable}" class="badge badge-warning" style="font-size:0.75rem; margin-left:4px;">
+                        🔔 Alerts On
+                    </span>
+                </td>
+                <td style="font-size:0.85rem; color:var(--text-muted);" th:text="${#temporals.format(w.createdAt, 'dd MMM yyyy')}"></td>
+                <td>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <!-- Borrow if available -->
+                        <form th:action="@{/transactions/issue/{id}(id=${w.book.id})}" method="post" th:if="${w.book.available}" style="display:inline; margin:0;">
+                            <button type="submit" class="btn btn-primary" style="padding:4px 10px; font-size:0.85rem;">Borrow</button>
+                        </form>
+                        <!-- Reserve if unavailable -->
+                        <form th:action="@{/reservations/reserve/{id}(id=${w.book.id})}" method="post" th:unless="${w.book.available}" style="display:inline; margin:0;">
+                            <button type="submit" class="btn btn-gold" style="padding:4px 10px; font-size:0.85rem;">Reserve</button>
+                        </form>
+                        <!-- Remove -->
+                        <form th:action="@{/catalog/wishlist/{bookId}/remove(bookId=${w.book.id})}" method="post" style="display:inline; margin:0;">
+                            <button type="submit" class="btn btn-outline" style="padding:4px 8px; font-size:0.85rem; color:var(--color-brand-maroon);" title="Remove from wishlist">
+                                ✕ Remove
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+</body>
+</html>

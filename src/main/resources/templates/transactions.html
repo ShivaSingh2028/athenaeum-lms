@@ -1,54 +1,85 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Transactions - CollegeLib</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('Circulation History')}">
+    <title>Transactions - Athenaeum</title>
 </head>
 <body>
 <div th:replace="~{fragments :: nav}"></div>
 
 <div class="container">
-    <div class="page-title">Transactions</div>
-    <div class="page-subtitle">All issue and return records across the library.</div>
+    <div class="flex-between">
+        <div>
+            <div class="page-title">Circulation Ledger</div>
+            <div class="page-subtitle">Complete borrowing, renewal, and return records across the library.</div>
+        </div>
+        <div>
+            <a th:href="@{/circulation/desk}" class="btn btn-primary">⚡ Front Desk Terminal</a>
+        </div>
+    </div>
 
     <div class="card">
         <table>
             <thead>
             <tr>
-                <th>Book</th><th>User</th><th>Issued</th><th>Due</th><th>Returned</th>
-                <th>Status</th><th>Fine</th><th>Actions</th>
+                <th>Title & Copy Barcode</th>
+                <th>Patron</th>
+                <th>Issue Date</th>
+                <th>Due Date</th>
+                <th>Returned</th>
+                <th>Status</th>
+                <th>Fine</th>
+                <th>Actions</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="t : ${transactions}">
-                <td th:text="${t.book.title}"></td>
-                <td th:text="${t.user.name}"></td>
+                <td>
+                    <div style="font-weight: 700; color: var(--color-brand-navy);" th:text="${t.book.title}">Title</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" 
+                         th:text="'Barcode: ' + (${t.bookCopy != null ? t.bookCopy.barcode : 'General Copy'})">
+                    </div>
+                </td>
+                <td>
+                    <div th:text="${t.user.name}">Patron</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" th:text="${t.user.email}">email</div>
+                </td>
                 <td th:text="${t.issueDate}"></td>
                 <td th:text="${t.dueDate}"></td>
                 <td th:text="${t.returnDate != null ? t.returnDate : '—'}"></td>
                 <td>
-                    <span class="badge badge-issued" th:if="${t.status.name() == 'ISSUED' and !t.dueDate.isBefore(T(java.time.LocalDate).now())}">Issued</span>
-                    <span class="badge badge-overdue" th:if="${t.status.name() == 'ISSUED' and t.dueDate.isBefore(T(java.time.LocalDate).now())}">Overdue</span>
-                    <span class="badge badge-returned" th:if="${t.status.name() == 'RETURNED'}">Returned</span>
+                    <span class="badge" 
+                          th:classappend="${t.status.name() == 'RETURNED' ? 'badge-success' : (t.dueDate.isBefore(T(java.time.LocalDate).now()) ? 'badge-danger' : 'badge-warning')}"
+                          th:text="${t.status.name() == 'ISSUED' and t.dueDate.isBefore(T(java.time.LocalDate).now()) ? 'OVERDUE' : t.status}">
+                    </span>
                 </td>
                 <td>
-                    <span th:if="${t.fineAmount > 0}" th:text="'₹' + ${t.fineAmount} + (${t.finePaid} ? ' (paid)' : ' (unpaid)')"></span>
-                    <span th:if="${t.fineAmount == 0}">—</span>
+                    <span th:if="${t.fineAmount > 0}" 
+                          th:classappend="${t.finePaid ? 'badge badge-success' : 'badge badge-danger'}"
+                          th:text="'₹' + ${t.fineAmount} + (${t.finePaid} ? ' (Paid)' : ' (Unpaid)')">
+                    </span>
+                    <span th:if="${t.fineAmount == 0}" style="color: var(--text-muted);">—</span>
                 </td>
                 <td>
-                    <form th:if="${t.status.name() == 'ISSUED'}" th:action="@{'/transactions/' + ${t.id} + '/return'}" method="post" style="display:inline;">
-                        <button class="btn btn-primary btn-sm" type="submit">Return</button>
-                    </form>
-                    <form th:if="${t.fineAmount > 0 and !t.finePaid}" th:action="@{'/transactions/' + ${t.id} + '/pay-fine'}" method="post" style="display:inline;">
-                        <button class="btn btn-outline btn-sm" type="submit">Mark Fine Paid</button>
-                    </form>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <form th:if="${t.status.name() == 'ISSUED'}" th:action="@{'/transactions/' + ${t.id} + '/return'}" method="post" style="display:inline; margin:0;">
+                            <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.85rem;" type="submit">Return</button>
+                        </form>
+                        <form th:if="${t.fineAmount > 0 and !t.finePaid}" th:action="@{'/transactions/' + ${t.id} + '/pay-fine'}" method="post" style="display:inline; margin:0;">
+                            <button class="btn btn-gold" style="padding: 4px 10px; font-size: 0.85rem;" type="submit">Mark Paid</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            <tr th:if="${transactions.empty}">
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                    No circulation transactions recorded yet.
                 </td>
             </tr>
             </tbody>
         </table>
-        <div class="empty-state" th:if="${#lists.isEmpty(transactions)}">No transactions recorded yet.</div>
     </div>
 </div>
+
+<div th:replace="~{fragments :: footer}"></div>
 </body>
 </html>

@@ -38,7 +38,8 @@ public class ReservationController {
 
     @PostMapping("/{id}/cancel")
     public String cancel(@PathVariable Long id) {
-        reservationService.cancel(id);
+        User user = userService.getCurrentUser();
+        reservationService.cancel(id, user);
         return "redirect:/dashboard";
     }
 }

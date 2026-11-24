@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Book Purchase Requests')}">
+    <title>Purchase Requests - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container" style="max-width:1100px; margin: 2rem auto;">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
+        <div>
+            <h1 class="page-title" style="margin:0;">Book Acquisition Requests</h1>
+            <div class="page-subtitle">Suggest new titles and resources for the library collection.</div>
+        </div>
+        <button onclick="document.getElementById('requestModal').style.display='flex'" class="btn btn-primary">
+            + Suggest a New Book
+        </button>
+    </div>
+
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+
+    <div class="card" th:if="${requests.empty}" style="text-align:center; padding:3rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">📚</div>
+        <h3 style="margin-top:0;">No Purchase Requests Yet</h3>
+        <p style="color:var(--text-muted); max-width:400px; margin:0 auto 1.5rem auto;">
+            Need a book that isn't currently in our collection? Submit a purchase recommendation for library review.
+        </p>
+        <button onclick="document.getElementById('requestModal').style.display='flex'" class="btn btn-primary">
+            Suggest a Book
+        </button>
+    </div>
+
+    <div class="card" th:unless="${requests.empty}">
+        <table>
+            <thead>
+            <tr>
+                <th>Title & Author</th>
+                <th>Suggested By</th>
+                <th>Reason / Notes</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th th:if="${isStaff}">Staff Review</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${requests}">
+                <td>
+                    <div style="font-weight:700; color:var(--color-brand-navy); font-size:1rem;" th:text="${r.title}"></div>
+                    <div style="font-size:0.8rem; color:var(--text-muted);" th:text="'by ' + ${r.author} + (${r.isbn != null && !r.isbn.blank} ? ' &bull; ISBN: ' + ${r.isbn} : '')"></div>
+                </td>
+                <td>
+                    <div style="font-size:0.9rem; font-weight:600;" th:text="${r.user.name}"></div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);" th:text="${r.user.email}"></div>
+                </td>
+                <td>
+                    <div style="font-size:0.85rem;" th:text="${r.reason != null && !r.reason.blank ? r.reason : '—'}"></div>
+                    <div th:if="${r.adminNotes != null && !r.adminNotes.blank}" style="font-size:0.75rem; color:var(--color-brand-maroon); margin-top:2px;" th:text="'Admin note: ' + ${r.adminNotes}"></div>
+                </td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${r.status.name() == 'APPROVED' ? 'badge-info' : (r.status.name() == 'ACQUIRED' ? 'badge-success' : (r.status.name() == 'ORDERED' ? 'badge-warning' : (r.status.name() == 'REJECTED' ? 'badge-danger' : 'badge-secondary')))}"
+                          th:text="${r.status}">
+                    </span>
+                </td>
+                <td style="font-size:0.85rem; color:var(--text-muted);" th:text="${#temporals.format(r.createdAt, 'dd MMM yyyy')}"></td>
+                <td th:if="${isStaff}">
+                    <form th:action="@{/catalog/purchase-requests/{id}/review(id=${r.id})}" method="post" style="display:flex; gap:6px; align-items:center; margin:0;">
+                        <select name="status" style="padding:4px 8px; font-size:0.8rem; border-radius:4px; border:1px solid var(--border-color);">
+                            <option value="PENDING" th:selected="${r.status.name() == 'PENDING'}">Pending</option>
+                            <option value="APPROVED" th:selected="${r.status.name() == 'APPROVED'}">Approve</option>
+                            <option value="ORDERED" th:selected="${r.status.name() == 'ORDERED'}">Ordered</option>
+                            <option value="ACQUIRED" th:selected="${r.status.name() == 'ACQUIRED'}">Acquired</option>
+                            <option value="REJECTED" th:selected="${r.status.name() == 'REJECTED'}">Reject</option>
+                        </select>
+                        <input type="text" name="adminNotes" placeholder="Reason/Note" style="padding:4px 8px; font-size:0.8rem; width:110px; border-radius:4px; border:1px solid var(--border-color);">
+                        <button type="submit" class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;">Save</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: New Request -->
+<div id="requestModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
+    <div class="card" style="max-width:550px; width:90%; padding:24px; border-radius:12px; background:var(--color-surface, #fff);">
+        <h3 style="margin-top:0; color:var(--color-brand-navy);">Suggest a Book Purchase</h3>
+        <p style="font-size:0.875rem; color:var(--text-muted);">
+            Recommend an academic or reference book to be added to the institution collection.
+        </p>
+
+        <form th:action="@{/catalog/purchase-requests/submit}" method="post">
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-weight:600; display:block; margin-bottom:4px;">Book Title *</label>
+                <input type="text" name="title" required placeholder="Full title of the book" style="width:100%;">
+            </div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-weight:600; display:block; margin-bottom:4px;">Author(s) *</label>
+                <input type="text" name="author" required placeholder="Author or editor names" style="width:100%;">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div class="form-group">
+                    <label style="font-weight:600; display:block; margin-bottom:4px;">ISBN (Optional)</label>
+                    <input type="text" name="isbn" placeholder="10 or 13 digits" style="width:100%;">
+                </div>
+                <div class="form-group">
+                    <label style="font-weight:600; display:block; margin-bottom:4px;">Publisher (Optional)</label>
+                    <input type="text" name="publisher" placeholder="Publisher name" style="width:100%;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="font-weight:600; display:block; margin-bottom:4px;">Reason for Recommendation</label>
+                <textarea name="reason" rows="3" placeholder="e.g. Required reading for CS401; essential research reference..." style="width:100%; resize:vertical; padding:8px; border:1px solid var(--border-color); border-radius:6px;"></textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="document.getElementById('requestModal').style.display='none'" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+</body>
+</html>

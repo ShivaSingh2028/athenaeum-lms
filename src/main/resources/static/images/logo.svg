@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4A849"/>
+      <stop offset="50%" stop-color="#B98D2E"/>
+      <stop offset="100%" stop-color="#916B1E"/>
+    </linearGradient>
+    <linearGradient id="navyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1B2A4A"/>
+      <stop offset="100%" stop-color="#0E1726"/>
+    </linearGradient>
+    <filter id="subtleGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Shield / Rounded Rect -->
+  <rect width="512" height="512" rx="108" fill="url(#navyGrad)"/>
+  
+  <!-- Outer Gold Rim -->
+  <rect x="16" y="16" width="480" height="480" rx="92" fill="none" stroke="url(#goldGrad)" stroke-width="6" opacity="0.4"/>
+
+  <!-- Classical Building Structure -->
+  <g filter="url(#subtleGlow)" transform="translate(0, 10)">
+    <!-- Pediment (Triangular Gable) -->
+    <polygon points="256,90 96,180 416,180" fill="url(#goldGrad)"/>
+    <!-- Pediment Inner Inset -->
+    <polygon points="256,118 136,170 376,170" fill="#1B2A4A"/>
+    <!-- Pediment Central Crest: Open Book / Wisdom Emblem -->
+    <path d="M 232,148 Q 244,142 256,146 Q 268,142 280,148 L 280,162 Q 268,156 256,160 Q 244,156 232,162 Z" fill="url(#goldGrad)"/>
+    <circle cx="256" cy="134" r="5" fill="url(#goldGrad)"/>
+
+    <!-- Entablature / Architrave Beam -->
+    <rect x="90" y="180" width="332" height="26" rx="4" fill="url(#goldGrad)"/>
+    <line x1="94" y1="193" x2="418" y2="193" stroke="#916B1E" stroke-width="2"/>
+
+    <!-- 4 Classical Fluted Columns -->
+    <!-- Column 1 -->
+    <rect x="114" y="206" width="40" height="150" rx="3" fill="url(#goldGrad)"/>
+    <rect x="110" y="206" width="48" height="10" rx="2" fill="#D4A849"/>
+    <rect x="110" y="346" width="48" height="10" rx="2" fill="#D4A849"/>
+    <line x1="124" y1="216" x2="124" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="134" y1="216" x2="134" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="144" y1="216" x2="144" y2="346" stroke="#916B1E" stroke-width="2"/>
+
+    <!-- Column 2 -->
+    <rect x="194" y="206" width="40" height="150" rx="3" fill="url(#goldGrad)"/>
+    <rect x="190" y="206" width="48" height="10" rx="2" fill="#D4A849"/>
+    <rect x="190" y="346" width="48" height="10" rx="2" fill="#D4A849"/>
+    <line x1="204" y1="216" x2="204" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="214" y1="216" x2="214" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="224" y1="216" x2="224" y2="346" stroke="#916B1E" stroke-width="2"/>
+
+    <!-- Column 3 -->
+    <rect x="278" y="206" width="40" height="150" rx="3" fill="url(#goldGrad)"/>
+    <rect x="274" y="206" width="48" height="10" rx="2" fill="#D4A849"/>
+    <rect x="274" y="346" width="48" height="10" rx="2" fill="#D4A849"/>
+    <line x1="288" y1="216" x2="288" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="298" y1="216" x2="298" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="308" y1="216" x2="308" y2="346" stroke="#916B1E" stroke-width="2"/>
+
+    <!-- Column 4 -->
+    <rect x="358" y="206" width="40" height="150" rx="3" fill="url(#goldGrad)"/>
+    <rect x="354" y="206" width="48" height="10" rx="2" fill="#D4A849"/>
+    <rect x="354" y="346" width="48" height="10" rx="2" fill="#D4A849"/>
+    <line x1="368" y1="216" x2="368" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="378" y1="216" x2="378" y2="346" stroke="#916B1E" stroke-width="2"/>
+    <line x1="388" y1="216" x2="388" y2="346" stroke="#916B1E" stroke-width="2"/>
+
+    <!-- Stepped Stylobate / Base (3 tiers) -->
+    <!-- Step 1 -->
+    <rect x="80" y="356" width="352" height="18" rx="4" fill="url(#goldGrad)"/>
+    <!-- Step 2 -->
+    <rect x="66" y="374" width="380" height="18" rx="4" fill="url(#goldGrad)"/>
+    <!-- Step 3 (Plinth) -->
+    <rect x="52" y="392" width="408" height="22" rx="5" fill="url(#goldGrad)"/>
+    <line x1="56" y1="403" x2="456" y2="403" stroke="#916B1E" stroke-width="2"/>
+  </g>
+</svg>

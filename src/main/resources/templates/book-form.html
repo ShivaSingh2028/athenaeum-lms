@@ -2,45 +2,171 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Book Form - CollegeLib</title>
+    <title th:text="${book.id == null ? 'Add New Book - Athenaeum' : 'Edit Book - Athenaeum'}">Book Form - Athenaeum</title>
+    <link rel="stylesheet" th:href="@{/css/tokens.css}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <div th:replace="~{fragments :: nav}"></div>
 
-<div class="container" style="max-width:600px;">
-    <div class="page-title" th:text="${book.id == null ? 'Add New Book' : 'Edit Book'}"></div>
+<div class="container" style="max-width:760px; margin: 2rem auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <div>
+            <h1 class="page-title" style="margin:0;" th:text="${book.id == null ? 'Add Bibliographic Record' : 'Edit Bibliographic Record'}"></h1>
+            <p style="color:var(--color-text-muted); font-size:0.9rem; margin-top:0.25rem;">Enter ISBN to auto-populate metadata from global book databases, or fill manually.</p>
+        </div>
+        <a href="/books" class="btn btn-outline" style="font-size:0.875rem;">Back to Catalog</a>
+    </div>
 
-    <div class="card">
+    <div class="card" style="padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
         <form th:action="${book.id == null ? '/books' : '/books/' + book.id}" method="post" th:object="${book}">
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" th:field="*{title}" required>
+
+            <!-- ISBN Auto-Lookup Toolbar -->
+            <div style="background:var(--color-surface-hover); padding:1rem; border-radius:var(--radius-md); border:1px dashed var(--color-border); margin-bottom:1.5rem;">
+                <label style="font-weight:600; font-size:0.875rem; color:var(--color-primary); display:block; margin-bottom:0.4rem;">
+                    ISBN-10 or ISBN-13 (Auto-Metadata Retrieval)
+                </label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" id="isbnInput" th:field="*{isbn}" placeholder="e.g. 9780134685991 or 0134685997" required style="flex:1; font-family:monospace; font-weight:600;">
+                    <button type="button" id="lookupBtn" class="btn btn-primary" onclick="lookupIsbn()" style="white-space:nowrap; padding:0.6rem 1rem;">
+                        🔍 Auto-Fetch Details
+                    </button>
+                </div>
+                <div id="lookupStatus" style="font-size:0.825rem; margin-top:0.5rem; display:none;"></div>
             </div>
-            <div class="form-group">
-                <label>Author</label>
-                <input type="text" th:field="*{author}" required>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label style="font-weight:600;">Book Title *</label>
+                    <input type="text" id="titleInput" th:field="*{title}" required placeholder="Full book title">
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600;">Author(s) *</label>
+                    <input type="text" id="authorInput" th:field="*{author}" required placeholder="Primary author or authors">
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600;">Category / Subject *</label>
+                    <input type="text" id="categoryInput" th:field="*{category}" required placeholder="e.g. Computer Science, History">
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600;">Publisher</label>
+                    <input type="text" id="publisherInput" th:field="*{publisher}" placeholder="Publishing house">
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600;">Publication Year</label>
+                    <input type="number" id="yearInput" th:field="*{publicationYear}" placeholder="e.g. 2022" min="1500" max="2100">
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600;">Edition</label>
+                    <input type="text" th:field="*{edition}" placeholder="e.g. 3rd Edition">
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600;">Language</label>
+                    <input type="text" th:field="*{language}" placeholder="Default: English">
+                </div>
+
+                <div class="form-group" th:if="${book.id == null}">
+                    <label style="font-weight:600;">Initial Physical Copies *</label>
+                    <input type="number" th:field="*{totalCopies}" min="1" value="1" required>
+                    <small style="color:var(--color-text-muted);">Unique accession barcodes will be minted automatically.</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600;">Cover Image URL</label>
+                    <input type="url" id="coverInput" th:field="*{coverImageUrl}" placeholder="https://..." onchange="updateCoverPreview(this.value)">
+                </div>
             </div>
-            <div class="form-group">
-                <label>ISBN</label>
-                <input type="text" th:field="*{isbn}" required>
+
+            <!-- Cover Preview & Synopsis -->
+            <div style="display:flex; gap:1.5rem; margin-top:1rem; align-items:flex-start;">
+                <div style="width:110px; height:150px; border-radius:var(--radius-sm); border:1px solid var(--color-border); background:var(--color-surface-hover); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                    <img id="coverPreview" th:src="${book.coverImageUrl != null ? book.coverImageUrl : ''}" 
+                         alt="Cover Preview" style="width:100%; height:100%; object-fit:cover; display:none;"
+                         onload="this.style.display='block';" onerror="this.style.display='none';">
+                    <span id="coverPlaceholder" style="font-size:0.75rem; color:var(--color-text-muted); text-align:center; padding:0.5rem;">Cover Preview</span>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label style="font-weight:600;">Synopsis / Abstract</label>
+                    <textarea id="synopsisInput" th:field="*{synopsis}" rows="5" style="width:100%; resize:vertical; padding:0.6rem; border:1px solid var(--color-border); border-radius:var(--radius-sm);" placeholder="Short summary of the book..."></textarea>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Category</label>
-                <input type="text" th:field="*{category}" placeholder="e.g. Computer Science">
+
+            <div style="display:flex; gap:1rem; margin-top:2rem; justify-content:flex-end;">
+                <a href="/books" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary" style="padding:0.65rem 2rem; font-weight:600;">
+                    <span th:text="${book.id == null ? 'Save Book & Mint Copies' : 'Update Record'}"></span>
+                </button>
             </div>
-            <div class="form-group">
-                <label>Publisher</label>
-                <input type="text" th:field="*{publisher}">
-            </div>
-            <div class="form-group">
-                <label>Total Copies</label>
-                <input type="number" th:field="*{totalCopies}" min="1" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Save Book</button>
-            <a href="/books" class="btn btn-outline">Cancel</a>
         </form>
     </div>
 </div>
+
+<script>
+async function lookupIsbn() {
+    const rawIsbn = document.getElementById('isbnInput').value.trim();
+    const statusDiv = document.getElementById('lookupStatus');
+    const btn = document.getElementById('lookupBtn');
+
+    if (!rawIsbn) {
+        statusDiv.style.display = 'block';
+        statusDiv.style.color = 'var(--color-danger)';
+        statusDiv.textContent = 'Please enter an ISBN first.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Searching...';
+    statusDiv.style.display = 'block';
+    statusDiv.style.color = 'var(--color-primary)';
+    statusDiv.textContent = 'Querying Open Library & Google Books catalog...';
+
+    try {
+        const resp = await fetch('/api/v1/catalog/lookup-isbn?isbn=' + encodeURIComponent(rawIsbn));
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.title) document.getElementById('titleInput').value = data.title;
+            if (data.author) document.getElementById('authorInput').value = data.author;
+            if (data.publisher) document.getElementById('publisherInput').value = data.publisher;
+            if (data.publicationYear) document.getElementById('yearInput').value = data.publicationYear;
+            if (data.category) document.getElementById('categoryInput').value = data.category;
+            if (data.synopsis) document.getElementById('synopsisInput').value = data.synopsis;
+            if (data.coverImageUrl) {
+                document.getElementById('coverInput').value = data.coverImageUrl;
+                updateCoverPreview(data.coverImageUrl);
+            }
+            statusDiv.style.color = 'var(--color-success)';
+            statusDiv.textContent = '✓ Bibliographic metadata retrieved and filled successfully!';
+        } else {
+            statusDiv.style.color = 'var(--color-warning)';
+            statusDiv.textContent = 'ISBN not found in public registries. You can fill details manually.';
+        }
+    } catch (err) {
+        statusDiv.style.color = 'var(--color-danger)';
+        statusDiv.textContent = 'Lookup network request failed: ' + err.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 Auto-Fetch Details';
+    }
+}
+
+function updateCoverPreview(url) {
+    const img = document.getElementById('coverPreview');
+    const placeholder = document.getElementById('coverPlaceholder');
+    if (url && url.startsWith('http')) {
+        img.src = url;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        placeholder.style.display = 'block';
+    }
+}
+</script>
 </body>
 </html>

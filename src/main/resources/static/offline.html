@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Athenaeum LMS</title>
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--color-bg); font-family:var(--font-sans);">
+    <div class="card" style="max-width:480px; text-align:center; padding:3rem 2rem; border-radius:var(--radius-lg); box-shadow:var(--shadow-md);">
+        <img src="/images/logo.svg" alt="Athenaeum" width="64" height="64" style="margin-bottom:1.5rem;">
+        <h1 style="color:var(--color-primary); font-size:1.75rem; margin-bottom:0.75rem;">You are Offline</h1>
+        <p style="color:var(--color-text-muted); line-height:1.5; margin-bottom:1.5rem;">
+            It looks like you've lost internet connectivity. Athenaeum's offline shell has loaded your cached workspace. Reconnect to resume live catalog browsing and circulation actions.
+        </p>
+        <button onclick="window.location.reload()" class="btn btn-primary" style="padding:0.75rem 2rem;">
+            Retry Connection
+        </button>
+    </div>
+</body>
+</html>

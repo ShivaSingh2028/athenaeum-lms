@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('Copies - ' + ${book.title})}">
+    <title>Copies - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container">
+    <div class="flex-between">
+        <div>
+            <div style="font-size: 0.85rem; color: var(--color-brand-maroon); font-weight: 600; text-transform: uppercase;">
+                <a th:href="@{/books}">&larr; Back to Catalog</a>
+            </div>
+            <div class="page-title" th:text="${book.title}"></div>
+            <div class="page-subtitle" th:text="'By ' + ${book.author} + ' | ISBN: ' + ${book.isbn}"></div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a th:href="@{/books/{id}/edit(id=${book.id})}" class="btn btn-secondary">Edit Book Details</a>
+        </div>
+    </div>
+
+    <!-- Quick Add Copies Card -->
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')">
+        <h3 style="margin-top: 0; color: var(--color-brand-navy); font-size: 1.15rem;">+ Add Physical Copies</h3>
+        <form th:action="@{/books/{id}/copies/add(id=${book.id})}" method="post" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 140px;">
+                <label>Number of Copies</label>
+                <input type="number" name="quantity" value="1" min="1" max="100" required>
+            </div>
+            <div style="flex: 2; min-width: 200px;">
+                <label>Shelf Location</label>
+                <input type="text" name="shelfLocation" value="Rack A1" placeholder="e.g. Floor 2, Shelf 4B" required>
+            </div>
+            <div style="flex: 1; min-width: 140px;">
+                <label>Physical Condition</label>
+                <select name="condition">
+                    <option value="NEW">Brand New</option>
+                    <option value="GOOD" selected>Good Condition</option>
+                    <option value="WORN">Worn / Used</option>
+                    <option value="DAMAGED">Damaged</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary" style="height: 42px;">Add Copies</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Copies Inventory Table -->
+    <div class="card">
+        <div class="flex-between" style="margin-bottom: 16px;">
+            <h3 style="margin: 0; color: var(--color-brand-navy); font-size: 1.15rem;">Inventory Copies</h3>
+            <span class="user-chip" th:text="${copies.size() + ' Total Items'}"></span>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Accession Barcode</th>
+                <th>Shelf Location</th>
+                <th>Condition</th>
+                <th>Status</th>
+                <th>Acquired On</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="c : ${copies}">
+                <td>
+                    <code style="font-weight: 700; color: var(--color-brand-navy); font-size: 0.95rem;" th:text="${c.barcode}"></code>
+                </td>
+                <td th:text="${c.shelfLocation}"></td>
+                <td>
+                    <span class="badge" 
+                          th:classappend="${c.condition.name() == 'NEW' ? 'badge-success' : (c.condition.name() == 'DAMAGED' ? 'badge-danger' : 'badge-info')}"
+                          th:text="${c.condition}">
+                    </span>
+                </td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${c.status.name() == 'AVAILABLE' ? 'badge-success' : (c.status.name() == 'ISSUED' ? 'badge-warning' : 'badge-danger')}"
+                          th:text="${c.status}">
+                    </span>
+                </td>
+                <td th:text="${c.acquisitionDate}"></td>
+            </tr>
+            <tr th:if="${copies.empty}">
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                    No physical copies registered for this title yet.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+</body>
+</html>

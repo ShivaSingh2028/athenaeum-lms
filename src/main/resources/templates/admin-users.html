@@ -1,68 +1,98 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Manage Users - CollegeLib</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('User Management')}">
+    <title>Manage Users - Athenaeum</title>
 </head>
 <body>
 <div th:replace="~{fragments :: nav}"></div>
 
 <div class="container">
-    <div class="page-title">Manage Users</div>
-    <div class="page-subtitle">Assign roles and enable/disable accounts.</div>
+    <div class="flex-between">
+        <div>
+            <div class="page-title">User Management & Access Control</div>
+            <div class="page-subtitle">Manage patron records, assign staff privileges, and print membership passes.</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a th:href="@{/admin/policies}" class="btn btn-secondary">⚙️ Circulation Policies</a>
+            <a th:href="@{/circulation/desk}" class="btn btn-primary">Desk Circulation &rarr;</a>
+        </div>
+    </div>
 
-    <div class="card">
-        <h3 style="margin-top:0; color:var(--navy);">Add Staff Account</h3>
-        <form th:action="@{/admin/users/add}" method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+    <!-- Add Staff Account -->
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','SUPER_ADMIN','LIBRARY_ADMIN')">
+        <h3 style="margin-top:0; color:var(--color-brand-navy); font-size: 1.15rem;">+ Create Staff Account</h3>
+        <form th:action="@{/admin/users/add}" method="post" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
             <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
-                <label>Name</label>
-                <input type="text" name="name" required>
+                <label>Full Name</label>
+                <input type="text" name="name" placeholder="Dr. Jane Doe" required>
             </div>
             <div class="form-group" style="margin-bottom:0; flex:1; min-width:180px;">
-                <label>Email</label>
-                <input type="email" name="email" required>
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="staff@college.edu" required>
             </div>
             <div class="form-group" style="margin-bottom:0; flex:1; min-width:140px;">
-                <label>Password</label>
+                <label>Temporary Password</label>
                 <input type="password" name="password" required>
             </div>
-            <div class="form-group" style="margin-bottom:0; min-width:130px;">
-                <label>Role</label>
+            <div class="form-group" style="margin-bottom:0; min-width:160px;">
+                <label>System Role</label>
                 <select name="role">
                     <option value="LIBRARIAN">Librarian</option>
-                    <option value="ADMIN">Admin</option>
+                    <option value="LIBRARY_ADMIN">Library Admin</option>
+                    <option value="MEMBER">Member (Patron)</option>
+                    <option value="SUPER_ADMIN" sec:authorize="hasRole('SUPER_ADMIN')">Super Admin</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Add</button>
+            <div>
+                <button type="submit" class="btn btn-primary" style="height: 42px;">Create Account</button>
+            </div>
         </form>
     </div>
 
+    <!-- Users Table -->
     <div class="card">
         <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead>
+            <tr>
+                <th>Patron Details</th>
+                <th>Email</th>
+                <th>Role Tier</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
             <tbody>
             <tr th:each="u : ${users}">
-                <td th:text="${u.name}"></td>
-                <td th:text="${u.email}"></td>
-                <td th:text="${u.role}"></td>
-                <td th:text="${u.enabled ? 'Active' : 'Disabled'}"></td>
                 <td>
-                    <form th:action="@{'/admin/users/' + ${u.id} + '/role'}" method="post" style="display:inline;">
-                        <select name="role" onchange="this.form.submit()">
-                            <option value="STUDENT" th:selected="${u.role.name() == 'STUDENT'}">Student</option>
-                            <option value="LIBRARIAN" th:selected="${u.role.name() == 'LIBRARIAN'}">Librarian</option>
-                            <option value="ADMIN" th:selected="${u.role.name() == 'ADMIN'}">Admin</option>
-                        </select>
-                    </form>
-                    <form th:action="@{'/admin/users/' + ${u.id} + '/toggle'}" method="post" style="display:inline;">
-                        <button class="btn btn-outline btn-sm" type="submit" th:text="${u.enabled ? 'Disable' : 'Enable'}"></button>
-                    </form>
+                    <div style="font-weight: 700; color: var(--color-brand-navy);" th:text="${u.name}">User Name</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" th:text="'ID: ' + (${u.memberCode != null ? u.memberCode : 'LIB-' + u.id})">LIB-1001</div>
+                </td>
+                <td th:text="${u.email}"></td>
+                <td>
+                    <span class="badge" 
+                          th:classappend="${u.role.name() == 'SUPER_ADMIN' ? 'badge-danger' : (u.role.name().contains('ADMIN') ? 'badge-warning' : (u.role.name() == 'LIBRARIAN' ? 'badge-info' : 'badge-success'))}" 
+                          th:text="${u.role}">
+                    </span>
+                </td>
+                <td>
+                    <span class="badge" th:classappend="${u.enabled ? 'badge-success' : 'badge-danger'}" th:text="${u.enabled ? 'Active' : 'Disabled'}"></span>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <a th:href="@{/admin/users/{id}/id-card(id=${u.id})}" target="_blank" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.85rem;" title="Print Digital Library Card">
+                            🪪 Pass
+                        </a>
+                        <form th:action="@{'/admin/users/' + ${u.id} + '/toggle'}" method="post" style="display:inline; margin:0;">
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.85rem;" type="submit" th:text="${u.enabled ? 'Disable' : 'Enable'}"></button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
     </div>
 </div>
+
+<div th:replace="~{fragments :: footer}"></div>
 </body>
 </html>

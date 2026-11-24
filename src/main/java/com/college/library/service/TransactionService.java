@@ -1,133 +1,218 @@
 package com.college.library.service;
 
 import com.college.library.entity.*;
+import com.college.library.finance.FineService;
+import com.college.library.policy.MembershipType;
+import com.college.library.policy.PolicyService;
 import com.college.library.repository.TransactionRepository;
-import org.springframework.beans.factory.annotation.Value;
+import com.college.library.tenant.TenantContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final BookService bookService;
+    private final BookCopyService bookCopyService;
     private final ReservationService reservationService;
     private final NotificationService notificationService;
-
-    @Value("${library.loan.period-days:14}")
-    private int loanPeriodDays;
-
-    @Value("${library.fine.per-day:5}")
-    private double finePerDay;
+    private final PolicyService policyService;
+    private final FineService fineService;
 
     public TransactionService(TransactionRepository transactionRepository,
-                               BookService bookService,
+                               BookCopyService bookCopyService,
                                ReservationService reservationService,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               PolicyService policyService,
+                               @Lazy FineService fineService) {
         this.transactionRepository = transactionRepository;
-        this.bookService = bookService;
+        this.bookCopyService = bookCopyService;
         this.reservationService = reservationService;
         this.notificationService = notificationService;
+        this.policyService = policyService;
+        this.fineService = fineService;
     }
 
-    /** Issues a book copy to a user, provided at least one copy is available. */
+    /** Issues an available physical copy of a book to a user. */
+    @Transactional
     public Transaction issueBook(Book book, User user) {
-        if (!book.isAvailable()) {
-            throw new IllegalStateException("No copies of \"" + book.getTitle() + "\" are currently available. "
-                    + "You can place a reservation instead.");
-        }
+        BookCopy copy = bookCopyService.findFirstAvailableCopy(book)
+                .orElseThrow(() -> new IllegalStateException("No available physical copies for \"" + book.getTitle() + "\"."));
+        return issueCopy(copy, user, null);
+    }
+
+    /** Issues a specific physical copy (scanned by barcode) to a user. */
+    @Transactional
+    public synchronized Transaction issueCopy(BookCopy copy, User user, User staff) {
+        bookCopyService.markIssued(copy);
+
+        LocalDate dueDate = policyService.calculateDueDate(user);
 
         Transaction t = new Transaction();
-        t.setBook(book);
+        t.setTenantId(TenantContext.getTenantId());
+        t.setBookCopy(copy);
+        t.setBook(copy.getBook());
         t.setUser(user);
+        t.setIssuedBy(staff);
         t.setIssueDate(LocalDate.now());
-        t.setDueDate(LocalDate.now().plusDays(loanPeriodDays));
+        t.setDueDate(dueDate);
         t.setStatus(TransactionStatus.ISSUED);
-        transactionRepository.save(t);
 
-        bookService.decrementAvailableCopies(book);
-        notificationService.notify(user, "You have issued \"" + book.getTitle() + "\". Due back on " + t.getDueDate() + ".");
+        Transaction saved = transactionRepository.save(t);
+        notificationService.notify(user, "Issued copy (" + copy.getBarcode() + ") of \"" 
+                + copy.getBook().getTitle() + "\". Due back on " + saved.getDueDate() + ".");
 
-        return t;
+        return saved;
     }
 
-    /** Returns a book, calculates any overdue fine, and fulfills the next reservation if one exists. */
+    /** Returns a book copy, calculates overdue fine, accrues into fine ledger, and fulfills reservation. */
+    @Transactional
     public Transaction returnBook(Long transactionId) {
         Transaction t = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
 
+        if (t.getTenantId() != null && !t.getTenantId().equals(TenantContext.getTenantId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: Transaction belongs to another library tenant.");
+        }
+
         t.setReturnDate(LocalDate.now());
         t.setStatus(TransactionStatus.RETURNED);
 
-        long overdueDays = ChronoUnit.DAYS.between(t.getDueDate(), LocalDate.now());
-        if (overdueDays > 0) {
-            t.setFineAmount(overdueDays * finePerDay);
-            notificationService.notify(t.getUser(),
-                    "\"" + t.getBook().getTitle() + "\" was returned " + overdueDays + " day(s) late. Fine: ₹" + t.getFineAmount());
+        BigDecimal fine = policyService.calculateFine(t, LocalDate.now());
+        if (fine.compareTo(BigDecimal.ZERO) > 0) {
+            t.setFineAmount(fine.doubleValue());
+            fineService.accrueFine(t, fine);
+            notificationService.notify(t.getUser(), "\"" + t.getBook().getTitle() 
+                    + "\" was returned late. Overdue fine assessed: ₹" + fine);
         }
 
-        transactionRepository.save(t);
-        bookService.incrementAvailableCopies(t.getBook());
+        Transaction saved = transactionRepository.save(t);
+        if (t.getBookCopy() != null) {
+            bookCopyService.markReturned(t.getBookCopy(), CopyCondition.GOOD);
+            reservationService.fulfillNextReservation(t.getBookCopy().getBook());
+        }
 
-        // if someone is waiting for this book, notify the next person in the reservation queue
-        reservationService.fulfillNextReservation(t.getBook());
+        return saved;
+    }
 
-        return t;
+    /** Patron self-return with strict ownership and tenant isolation check. */
+    @Transactional
+    public Transaction selfReturnBook(Long transactionId, User user) {
+        Transaction t = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
+
+        if (t.getTenantId() != null && !t.getTenantId().equals(TenantContext.getTenantId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: Transaction belongs to another library tenant.");
+        }
+        if (!user.getRole().isStaffOrAdmin() && !t.getUser().getId().equals(user.getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: You can only return books borrowed by your own account.");
+        }
+        return returnBook(transactionId);
+    }
+
+    /** Patron-initiated or staff-assisted renewal enforcing all blocking rules. */
+    @Transactional
+    public synchronized Transaction renewLoan(Long transactionId, User user) {
+        Transaction t = findById(transactionId);
+
+        // Rule 0: Tenant validation
+        if (t.getTenantId() != null && !t.getTenantId().equals(TenantContext.getTenantId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: Transaction belongs to another library tenant.");
+        }
+
+        // Rule 1: Ownership validation
+        if (!user.getRole().isStaffOrAdmin() && !t.getUser().getId().equals(user.getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: You can only renew loans issued to your own account.");
+        }
+
+        // Rule 2: Active loan status check
+        if (t.getStatus() != TransactionStatus.ISSUED) {
+            throw new IllegalStateException("Cannot renew a transaction that is already " + t.getStatus());
+        }
+
+        // Rule 3: Policy renewal limit check
+        MembershipType policy = policyService.getPolicyForUser(t.getUser());
+        if (t.getRenewalCount() >= policy.getRenewalLimit()) {
+            throw new IllegalStateException("Renewal limit reached. Maximum renewals permitted: " + policy.getRenewalLimit());
+        }
+
+        // Rule 4: Holding reservation check (someone is waiting in FIFO queue)
+        if (reservationService.hasPendingReservation(t.getBook())) {
+            throw new IllegalStateException("Renewal blocked: Another library member has reserved this title.");
+        }
+
+        // Rule 5: Fine threshold check (unpaid fines > ₹100 blocks renewal)
+        BigDecimal unpaidFine = fineService.getUserUnpaidFineTotal(t.getUser());
+        BigDecimal fineThreshold = new BigDecimal("100.00");
+        if (unpaidFine.compareTo(fineThreshold) > 0) {
+            throw new IllegalStateException("Renewal blocked: Outstanding unpaid fines of ₹" + unpaidFine 
+                    + " exceed the ₹" + fineThreshold + " threshold. Please settle fines first.");
+        }
+
+        // Apply renewal
+        t.setRenewalCount(t.getRenewalCount() + 1);
+        t.setDueDate(t.getDueDate().plusDays(policy.getLoanDurationDays()));
+        Transaction saved = transactionRepository.save(t);
+
+        notificationService.notify(t.getUser(), "Renewed \"" + t.getBook().getTitle() 
+                + "\". New due date: " + saved.getDueDate() + " (Renewal " + t.getRenewalCount() 
+                + "/" + policy.getRenewalLimit() + ")");
+
+        return saved;
     }
 
     public List<Transaction> findByUser(User user) {
-        return transactionRepository.findByUserOrderByIssueDateDesc(user);
+        return transactionRepository.findByTenantIdAndUserOrderByIssueDateDesc(TenantContext.getTenantId(), user);
     }
+
     public Transaction findById(Long id) {
         return transactionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + id));
     }
 
     public List<Transaction> findAllIssued() {
-        return transactionRepository.findByStatus(TransactionStatus.ISSUED);
+        return transactionRepository.findByTenantIdAndStatus(TenantContext.getTenantId(), TransactionStatus.ISSUED);
     }
 
     public List<Transaction> findAll() {
-        return transactionRepository.findAllByOrderByIssueDateDesc();
+        return transactionRepository.findByTenantIdOrderByIssueDateDesc(TenantContext.getTenantId());
     }
 
     public List<Transaction> findOverdue() {
-        return transactionRepository.findByStatusAndDueDateBefore(TransactionStatus.ISSUED, LocalDate.now());
+        return transactionRepository.findByTenantIdAndStatusAndDueDateBefore(
+                TenantContext.getTenantId(), TransactionStatus.ISSUED, LocalDate.now());
     }
 
     public boolean hasActiveLoan(Long bookId, User user) {
-        return transactionRepository.findByBookIdAndStatus(bookId, TransactionStatus.ISSUED)
+        return transactionRepository.findByTenantIdAndBookIdAndStatus(
+                TenantContext.getTenantId(), bookId, TransactionStatus.ISSUED)
                 .stream().anyMatch(t -> t.getUser().getId().equals(user.getId()));
     }
 
     public long countIssued() {
-        return transactionRepository.countByStatus(TransactionStatus.ISSUED);
+        return transactionRepository.countByTenantIdAndStatus(TenantContext.getTenantId(), TransactionStatus.ISSUED);
     }
 
     public long countReturned() {
-        return transactionRepository.countByStatus(TransactionStatus.RETURNED);
+        return transactionRepository.countByTenantIdAndStatus(TenantContext.getTenantId(), TransactionStatus.RETURNED);
     }
 
     public double totalFinesCollected() {
-        return transactionRepository.findByStatus(TransactionStatus.RETURNED).stream()
-                .filter(Transaction::isFinePaid)
-                .mapToDouble(Transaction::getFineAmount)
-                .sum();
+        return fineService.getTotalFinesCollected().doubleValue();
     }
 
     public double totalFinesOutstanding() {
-        return transactionRepository.findByStatus(TransactionStatus.RETURNED).stream()
-                .filter(t -> !t.isFinePaid())
-                .mapToDouble(Transaction::getFineAmount)
-                .sum();
+        return fineService.getTotalFinesOutstanding().doubleValue();
     }
 
+    @Transactional
     public void markFinePaid(Long transactionId) {
-        Transaction t = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
+        Transaction t = findById(transactionId);
         t.setFinePaid(true);
         transactionRepository.save(t);
     }

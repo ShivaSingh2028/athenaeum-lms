@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('Fine Ledger')}">
+    <title>Fine Ledger - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container">
+    <div class="flex-between">
+        <div>
+            <div class="page-title">Fines & Financial Ledger</div>
+            <div class="page-subtitle">Track circulation fines, record cash settlements, and audit staff fee waivers.</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a th:href="@{/circulation/desk}" class="btn btn-secondary">Front Desk</a>
+            <a th:href="@{/reports}" class="btn btn-secondary">Financial Reports</a>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="num" th:text="'₹' + ${totalCollected}">₹0</div>
+            <div class="label">Total Collected</div>
+        </div>
+        <div class="stat-box warn">
+            <div class="num" th:text="'₹' + ${totalOutstanding}">₹0</div>
+            <div class="label">Total Outstanding</div>
+        </div>
+        <div class="stat-box gold">
+            <div class="num" th:text="${fines.size()}">0</div>
+            <div class="label">Total Fine Records</div>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <!-- Fines Table -->
+    <div class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>Patron</th>
+                <th>Book & Loan</th>
+                <th>Assessed Amount</th>
+                <th>Settled / Waived</th>
+                <th>Balance Due</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="f : ${fines}">
+                <td>
+                    <div style="font-weight: 700; color: var(--color-brand-navy);" th:text="${f.user.name}">Patron Name</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" th:text="${f.user.email}">patron@college.edu</div>
+                </td>
+                <td>
+                    <div th:text="${f.transaction.book.title}">Book Title</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" th:text="'Due: ' + ${f.transaction.dueDate}">Due Date</div>
+                </td>
+                <td>
+                    <strong th:text="'₹' + ${f.amount}">₹50.00</strong>
+                </td>
+                <td>
+                    <div style="font-size: 0.85rem;" th:if="${f.paidAmount > 0}" th:text="'Paid: ₹' + ${f.paidAmount}">Paid: ₹0</div>
+                    <div style="font-size: 0.85rem; color: var(--color-brand-maroon);" th:if="${f.waivedAmount > 0}" 
+                         th:text="'Waived: ₹' + ${f.waivedAmount} + (${f.waiverReason != null ? ' (' + f.waiverReason + ')' : ''})">
+                    </div>
+                </td>
+                <td>
+                    <strong style="color: var(--accent-danger);" th:text="'₹' + ${f.getOutstandingAmount()}">₹0</strong>
+                </td>
+                <td>
+                    <span class="badge" 
+                          th:classappend="${f.status.name() == 'PAID' ? 'badge-success' : (f.status.name() == 'WAIVED' ? 'badge-info' : 'badge-danger')}"
+                          th:text="${f.status}">
+                    </span>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;" th:if="${f.getOutstandingAmount() > 0}">
+                        <!-- Record Cash Payment Form -->
+                        <form th:action="@{/finance/fines/{id}/pay-cash(id=${f.id})}" method="post" style="display: flex; gap: 4px; margin: 0;">
+                            <input type="hidden" name="amount" th:value="${f.getOutstandingAmount()}">
+                            <button type="submit" class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" title="Record cash collection">
+                                💵 Cash
+                            </button>
+                        </form>
+                        <!-- Waive Fine Button / Form -->
+                        <button type="button" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" 
+                                th:onclick="'openWaiveModal(' + ${f.id} + ', ' + ${f.getOutstandingAmount()} + ')'">
+                            ⚖️ Waive
+                        </button>
+                    </div>
+                    <div th:unless="${f.getOutstandingAmount() > 0}">
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">Settled</span>
+                    </div>
+                </td>
+            </tr>
+            <tr th:if="${fines.empty}">
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                    Zero fines accrued in the system.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal for Staff Fine Waiver -->
+<div id="waiveModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="width: 440px; padding: 28px; box-shadow: var(--shadow-lg);">
+        <h3 style="margin-top: 0; color: var(--color-brand-navy);">Audited Fine Waiver</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            In accordance with library compliance policy, waivers are permanently recorded with your staff ID and justification.
+        </p>
+        <form id="waiveForm" method="post">
+            <div class="form-group">
+                <label>Amount to Waive (₹)</label>
+                <input type="number" step="0.50" id="waiveAmountInput" name="amount" required>
+            </div>
+            <div class="form-group">
+                <label>Mandatory Justification / Reason</label>
+                <textarea name="reason" rows="3" placeholder="e.g. Dean's authorized medical exemption #MED-941" required></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" onclick="closeWaiveModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-gold">Confirm Audited Waiver</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+
+<script>
+    function openWaiveModal(fineId, outstanding) {
+        document.getElementById('waiveForm').action = '/finance/fines/' + fineId + '/waive';
+        document.getElementById('waiveAmountInput').value = outstanding;
+        document.getElementById('waiveAmountInput').max = outstanding;
+        document.getElementById('waiveModal').style.display = 'flex';
+    }
+    function closeWaiveModal() {
+        document.getElementById('waiveModal').style.display = 'none';
+    }
+</script>
+</body>
+</html>

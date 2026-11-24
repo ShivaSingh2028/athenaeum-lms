@@ -2,9 +2,11 @@ package com.college.library.service;
 
 import com.college.library.entity.*;
 import com.college.library.repository.ReservationRepository;
+import com.college.library.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,20 +20,20 @@ public class ReservationService {
     @Value("${library.reservation.hold-days:2}")
     private int holdDays;
 
-    // @Lazy breaks the circular dependency: TransactionService needs ReservationService,
-    // and ReservationService needs NotificationService to send alerts.
     public ReservationService(ReservationRepository reservationRepository,
                                @Lazy NotificationService notificationService) {
         this.reservationRepository = reservationRepository;
         this.notificationService = notificationService;
     }
 
+    @Transactional
     public Reservation reserve(Book book, User user) {
         if (book.isAvailable()) {
             throw new IllegalStateException("\"" + book.getTitle() + "\" is currently available — "
                     + "you can issue it directly instead of reserving it.");
         }
         Reservation r = new Reservation();
+        r.setTenantId(TenantContext.getTenantId());
         r.setBook(book);
         r.setUser(user);
         r.setReservationDate(LocalDate.now());
@@ -39,10 +41,17 @@ public class ReservationService {
         return reservationRepository.save(r);
     }
 
+    public boolean hasPendingReservation(Book book) {
+        return !reservationRepository.findByTenantIdAndBookIdAndStatusOrderByReservationDateAsc(
+                TenantContext.getTenantId(), book.getId(), ReservationStatus.PENDING).isEmpty();
+    }
+
     /** Called after a book is returned — notifies the longest-waiting reserver, if any. */
+    @Transactional
     public void fulfillNextReservation(Book book) {
         List<Reservation> queue = reservationRepository
-                .findByBookIdAndStatusOrderByReservationDateAsc(book.getId(), ReservationStatus.PENDING);
+                .findByTenantIdAndBookIdAndStatusOrderByReservationDateAsc(
+                        TenantContext.getTenantId(), book.getId(), ReservationStatus.PENDING);
         if (!queue.isEmpty()) {
             Reservation next = queue.get(0);
             next.setStatus(ReservationStatus.FULFILLED);
@@ -55,17 +64,32 @@ public class ReservationService {
     }
 
     public List<Reservation> findByUser(User user) {
-        return reservationRepository.findByUserOrderByReservationDateDesc(user);
+        return reservationRepository.findByTenantIdAndUserOrderByReservationDateDesc(TenantContext.getTenantId(), user);
     }
 
     public List<Reservation> findPending() {
-        return reservationRepository.findByStatus(ReservationStatus.PENDING);
+        return reservationRepository.findByTenantIdAndStatus(TenantContext.getTenantId(), ReservationStatus.PENDING);
     }
 
-    public void cancel(Long reservationId) {
+    @Transactional
+    public void cancel(Long reservationId, User user) {
         Reservation r = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Reservation not found: " + reservationId));
+
+        if (r.getTenantId() != null && !r.getTenantId().equals(TenantContext.getTenantId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: Reservation belongs to another library tenant.");
+        }
+
+        if (user != null && !user.getRole().isStaffOrAdmin() && !r.getUser().getId().equals(user.getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: You can only cancel your own reservations.");
+        }
+
         r.setStatus(ReservationStatus.CANCELLED);
         reservationRepository.save(r);
+    }
+
+    @Transactional
+    public void cancel(Long reservationId) {
+        cancel(reservationId, null);
     }
 }

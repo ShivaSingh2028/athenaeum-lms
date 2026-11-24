@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('My Library Fines')}">
+    <title>My Fines - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container">
+    <div class="flex-between">
+        <div>
+            <div class="page-title">My Overdue Fines & Fees</div>
+            <div class="page-subtitle">View your assessed library fines and settle balances online via UPI, Cards, or Netbanking.</div>
+        </div>
+        <div>
+            <a th:href="@{/dashboard}" class="btn btn-secondary">&larr; Back to Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Outstanding Notice -->
+    <div class="card" style="border-left: 6px solid var(--accent-danger); background: var(--bg-surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <div style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">TOTAL OUTSTANDING BALANCE</div>
+                <div style="font-size: 2.2rem; font-weight: 800; color: var(--color-brand-maroon);" th:text="'₹' + ${unpaidTotal}">₹0.00</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;" th:if="${unpaidTotal > 100}">
+                    ⚠️ Outstanding fines exceeding ₹100 will block book borrowing and self-service renewals.
+                </div>
+            </div>
+            <div th:if="${unpaidTotal > 0}">
+                <button type="button" class="btn btn-primary" onclick="alert('Please select an individual fine below to pay via Razorpay or visit the circulation desk to pay via cash.')" style="padding: 12px 24px; font-size: 1rem;">
+                    💳 Settle Balance
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fines Table -->
+    <div class="card">
+        <h3 style="margin-top: 0; color: var(--color-brand-navy); font-size: 1.15rem; margin-bottom: 16px;">Fine History</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>Book Title</th>
+                <th>Due Date</th>
+                <th>Assessed Fine</th>
+                <th>Paid / Waived</th>
+                <th>Balance Due</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="f : ${fines}">
+                <td style="font-weight: 600;" th:text="${f.transaction.book.title}">Book Title</td>
+                <td th:text="${f.transaction.dueDate}">Due Date</td>
+                <td th:text="'₹' + ${f.amount}">₹50.00</td>
+                <td>
+                    <span th:if="${f.paidAmount > 0}" th:text="'Paid: ₹' + ${f.paidAmount}"></span>
+                    <span th:if="${f.waivedAmount > 0}" style="color: var(--color-brand-maroon);" th:text="'Waived: ₹' + ${f.waivedAmount}"></span>
+                    <span th:if="${f.paidAmount == 0 && f.waivedAmount == 0}">—</span>
+                </td>
+                <td>
+                    <strong style="color: var(--accent-danger);" th:text="'₹' + ${f.getOutstandingAmount()}">₹0.00</strong>
+                </td>
+                <td>
+                    <span class="badge" 
+                          th:classappend="${f.status.name() == 'PAID' ? 'badge-success' : (f.status.name() == 'WAIVED' ? 'badge-info' : 'badge-danger')}"
+                          th:text="${f.status}">
+                    </span>
+                </td>
+                <td>
+                    <button th:if="${f.getOutstandingAmount() > 0}" type="button" class="btn btn-gold" 
+                            style="padding: 4px 10px; font-size: 0.85rem;"
+                            th:onclick="'initiateRazorpayPayment(' + ${f.id} + ', ' + ${f.getOutstandingAmount()} + ')'">
+                        Pay ₹<span th:text="${f.getOutstandingAmount()}"></span> Online
+                    </button>
+                    <span th:unless="${f.getOutstandingAmount() > 0}" style="color: var(--text-muted); font-size: 0.85rem;">
+                        Settled ✓
+                    </span>
+                </td>
+            </tr>
+            <tr th:if="${fines.empty}">
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                    Great news! You have no outstanding or accrued fines.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+
+<!-- Razorpay Checkout Integration Script -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    async function initiateRazorpayPayment(fineId, amount) {
+        try {
+            const res = await fetch('/api/v1/payments/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fineId: fineId })
+            });
+            const order = await res.json();
+            if (order.error) {
+                alert("Error: " + order.error);
+                return;
+            }
+
+            const options = {
+                key: order.keyId,
+                amount: order.amount,
+                currency: order.currency,
+                name: "Athenaeum Library",
+                description: "Overdue Circulation Fine Settlement #" + fineId,
+                image: "/images/logo.png",
+                order_id: order.id,
+                handler: async function (response) {
+                    const verifyRes = await fetch('/api/v1/payments/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fineId: fineId,
+                            razorpay_order_id: response.razorpay_order_id || order.id,
+                            razorpay_payment_id: response.razorpay_payment_id || ('pay_mock_' + Date.now()),
+                            razorpay_signature: response.razorpay_signature || 'mock_signature_verified'
+                        })
+                    });
+                    const result = await verifyRes.json();
+                    if (result.success) {
+                        alert("Payment successful! Receipt generated.");
+                        window.location.reload();
+                    } else {
+                        alert("Payment verification failed: " + result.error);
+                    }
+                },
+                theme: {
+                    color: "#1B2A4A"
+                }
+            };
+
+            // In sandbox/browser environment, if Razorpay SDK fails or is offline, simulate modal
+            if (typeof Razorpay !== 'undefined' && order.keyId && !order.keyId.includes('mock')) {
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } else {
+                if (confirm("Simulate online payment of ₹" + amount + " via Razorpay UPI/Netbanking?")) {
+                    options.handler({
+                        razorpay_order_id: order.id,
+                        razorpay_payment_id: "pay_sim_" + Date.now(),
+                        razorpay_signature: "mock_sig_" + Date.now()
+                    });
+                }
+            }
+        } catch(err) {
+            alert("Payment initiation error: " + err.message);
+        }
+    }
+</script>
+</body>
+</html>

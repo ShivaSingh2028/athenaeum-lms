@@ -1,0 +1,171 @@
+Group No. 2 (Shiva, Saksham, Suraj)
+REQUIREMENT ELICITATION ACTIVITIES
+Library Management System — Refined Requirements
+Introduction
+Requirement elicitation is the process of discovering, collecting, and clarifying stakeholder needs before they are analyzed and formally specified. For the Library Management System (LMS), elicitation was carried out through three core activities: identifying stakeholders, gathering functional requirements, and gathering non-functional requirements. This revision restates each requirement as a single, atomic, testable statement, and expands the functional list to include reservation and notification behavior confirmed during prototyping.
+1. Stakeholders
+Stakeholder
+Type
+Interest / Contribution
+Library Administrator
+Internal — Decision maker
+Defines policies, approves system configuration, oversees operations, owns budget and reporting needs.
+Librarian / Library Staff
+Internal — Primary operator
+Day-to-day user of circulation and cataloguing functions; primary source of workflow detail.
+Library Member (Student)
+External — End user
+Borrows and reserves books; needs simple search, self-service issue, and visibility into loans and fines.
+2. Functional Requirements (Refined)
+Each functional requirement below is restated as a single, atomic, testable statement using "shall," naming the responsible role and the expected system behavior.
+ID
+Area
+Requirement
+FR-01
+Authentication & Authorization
+The system shall authenticate users via email and password, and restrict access to features based on assigned role (Admin, Librarian, Student).
+FR-02
+Book & Catalog Management
+Authorized staff (Admin/Librarian) shall create, update, view, and delete book records, each including title, author, ISBN, category, publisher, and total/available copy counts.
+FR-03
+Catalog Search
+Users shall search and filter the catalog by title, author, ISBN, or category, and view real-time copy availability.
+FR-04
+Self-Service Book Issue
+A Student shall be able to issue an available book copy to their own account in a single action, with the due date calculated automatically.
+FR-05
+Staff-Assisted Book Issue
+An Admin or Librarian shall be able to issue a book to any registered user by specifying the user's account.
+FR-06
+Book Return & Fine Calculation
+An Admin or Librarian shall record a book's return; the system shall automatically calculate an overdue fine when the return date exceeds the due date, using a configurable per-day rate.
+FR-07
+Reservation Queue
+When a book has zero available copies, a Student shall be able to place a reservation; the system shall maintain a first-in-first-out queue per book.
+FR-08
+Reservation Fulfillment Notification
+When a reserved book is returned, the system shall automatically notify the next member in that book's reservation queue that a copy is available.
+FR-09
+Fine Tracking
+The system shall record each fine's amount and payment status (paid/unpaid), and allow authorized staff to mark a fine as paid.
+FR-10
+In-App Notifications
+The system shall generate an in-app notification for each issue, return, overdue fine, and reservation-fulfillment event, viewable by the affected user.
+FR-11
+Dashboards & Reporting
+Authorized staff shall view summary statistics (total books, users, currently issued, overdue count) and reports (most-borrowed titles, overdue list, fines collected vs. outstanding).
+FR-12
+User Account Management
+An Admin shall be able to view all user accounts, change a user's role, and enable or disable an account.
+FR-13
+Self-Registration
+A prospective member shall be able to create their own Student account by providing name, email, phone, and password.
+3. Non-Functional Requirements (Refined)
+Each non-functional requirement below includes a measurable acceptance criterion, so that it can be objectively verified during testing rather than left to interpretation.
+ID
+Category
+Requirement
+NFR-01
+Performance
+95% of common operations (catalog search, book issue, book return) shall complete within 2 seconds under normal load.
+NFR-02
+Security
+User passwords shall be stored using a one-way, salted hashing algorithm (e.g., BCrypt); every state-changing operation shall require an authenticated session with sufficient role privilege.
+NFR-03
+Reliability
+Book issue, return, and reservation operations shall be atomic: a failure mid-operation shall not leave the available-copy count or transaction records in an inconsistent state.
+NFR-04
+Usability
+A first-time Student user shall be able to locate a book and issue it to themselves in 3 steps or fewer, without prior training or a user manual.
+NFR-05
+Scalability
+The system's data model and service layer shall support growth in catalog size, registered users, and transaction volume without requiring a schema redesign.
+NFR-06
+Maintainability
+The codebase shall be organized into distinct entity, repository, service, and controller layers, with each class limited to a single, clearly named responsibility.
+NFR-07
+Availability
+The system shall target at least 99% uptime during the library's defined service hours, excluding scheduled maintenance.
+NFR-08
+Compatibility
+The web interface shall render and function correctly on the current major versions of Chrome, Firefox, Edge, and Safari, on both desktop and mobile viewport widths.
+NFR-09
+Data Integrity
+The system shall enforce database-level constraints (unique ISBN, unique email, foreign-key relationships) to prevent invalid, orphaned, or duplicate records.
+NFR-10
+Auditability
+Every issue, return, and fine-payment event shall be permanently recorded with a timestamp and the associated user and book, supporting later reporting and dispute resolution.
+Outcome: Consolidated Requirements List
+Combining the refined functional and non-functional requirements above produces the following consolidated baseline for the Software Requirements Specification (SRS).
+ID
+Type
+Requirement
+FR-01
+Functional
+The system shall authenticate users via email and password, and restrict access to features based on assigned role (Admin, Librarian, Student).
+FR-02
+Functional
+Authorized staff (Admin/Librarian) shall create, update, view, and delete book records, each including title, author, ISBN, category, publisher, and total/available copy counts.
+FR-03
+Functional
+Users shall search and filter the catalog by title, author, ISBN, or category, and view real-time copy availability.
+FR-04
+Functional
+A Student shall be able to issue an available book copy to their own account in a single action, with the due date calculated automatically.
+FR-05
+Functional
+An Admin or Librarian shall be able to issue a book to any registered user by specifying the user's account.
+FR-06
+Functional
+An Admin or Librarian shall record a book's return; the system shall automatically calculate an overdue fine when the return date exceeds the due date, using a configurable per-day rate.
+FR-07
+Functional
+When a book has zero available copies, a Student shall be able to place a reservation; the system shall maintain a first-in-first-out queue per book.
+FR-08
+Functional
+When a reserved book is returned, the system shall automatically notify the next member in that book's reservation queue that a copy is available.
+FR-09
+Functional
+The system shall record each fine's amount and payment status (paid/unpaid), and allow authorized staff to mark a fine as paid.
+FR-10
+Functional
+The system shall generate an in-app notification for each issue, return, overdue fine, and reservation-fulfillment event, viewable by the affected user.
+FR-11
+Functional
+Authorized staff shall view summary statistics (total books, users, currently issued, overdue count) and reports (most-borrowed titles, overdue list, fines collected vs. outstanding).
+FR-12
+Functional
+An Admin shall be able to view all user accounts, change a user's role, and enable or disable an account.
+FR-13
+Functional
+A prospective member shall be able to create their own Student account by providing name, email, phone, and password.
+NFR-01
+Non-Functional
+95% of common operations (catalog search, book issue, book return) shall complete within 2 seconds under normal load.
+NFR-02
+Non-Functional
+User passwords shall be stored using a one-way, salted hashing algorithm (e.g., BCrypt); every state-changing operation shall require an authenticated session with sufficient role privilege.
+NFR-03
+Non-Functional
+Book issue, return, and reservation operations shall be atomic: a failure mid-operation shall not leave the available-copy count or transaction records in an inconsistent state.
+NFR-04
+Non-Functional
+A first-time Student user shall be able to locate a book and issue it to themselves in 3 steps or fewer, without prior training or a user manual.
+NFR-05
+Non-Functional
+The system's data model and service layer shall support growth in catalog size, registered users, and transaction volume without requiring a schema redesign.
+NFR-06
+Non-Functional
+The codebase shall be organized into distinct entity, repository, service, and controller layers, with each class limited to a single, clearly named responsibility.
+NFR-07
+Non-Functional
+The system shall target at least 99% uptime during the library's defined service hours, excluding scheduled maintenance.
+NFR-08
+Non-Functional
+The web interface shall render and function correctly on the current major versions of Chrome, Firefox, Edge, and Safari, on both desktop and mobile viewport widths.
+NFR-09
+Non-Functional
+The system shall enforce database-level constraints (unique ISBN, unique email, foreign-key relationships) to prevent invalid, orphaned, or duplicate records.
+NFR-10
+Non-Functional
+Every issue, return, and fine-payment event shall be permanently recorded with a timestamp and the associated user and book, supporting later reporting and dispute resolution.

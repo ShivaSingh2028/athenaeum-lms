@@ -1,71 +1,91 @@
 package com.college.library.service;
 
 import com.college.library.entity.Book;
+import com.college.library.entity.CopyCondition;
 import com.college.library.repository.BookRepository;
+import com.college.library.tenant.TenantContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Service
 public class BookService {
 
     private final BookRepository bookRepository;
+    private final BookCopyService bookCopyService;
 
-    public BookService(BookRepository bookRepository) {
+    public BookService(BookRepository bookRepository, @Lazy BookCopyService bookCopyService) {
         this.bookRepository = bookRepository;
+        this.bookCopyService = bookCopyService;
     }
 
     public List<Book> findAll() {
-        return bookRepository.findAll();
+        List<Book> books = bookRepository.findByTenantId(TenantContext.getTenantId());
+        populateCopyCounts(books);
+        return books;
     }
 
     public Book findById(Long id) {
-        return bookRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Book not found: " + id));
+        Book book = bookRepository.findByIdAndTenantId(id, TenantContext.getTenantId())
+                .orElseThrow(() -> new IllegalArgumentException("Book not found with ID: " + id));
+        populateCopyCounts(List.of(book));
+        return book;
     }
 
     public List<Book> search(String query) {
         if (query == null || query.isBlank()) {
             return findAll();
         }
-        return bookRepository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCaseOrIsbnContainingIgnoreCase(
-                query, query, query);
+        List<Book> books = bookRepository.searchBooks(TenantContext.getTenantId(), query.trim());
+        populateCopyCounts(books);
+        return books;
     }
 
+    @Transactional
     public Book addBook(Book book) {
-        book.setAddedOn(LocalDate.now());
-        book.setAvailableCopies(book.getTotalCopies());
-        return bookRepository.save(book);
+        int initialCopies = book.getTotalCopies() > 0 ? book.getTotalCopies() : 1;
+        book.setTenantId(TenantContext.getTenantId());
+        Book savedBook = bookRepository.save(book);
+
+        // Automatically create discrete physical copies
+        bookCopyService.createCopies(savedBook, initialCopies, "General Rack", CopyCondition.GOOD);
+        populateCopyCounts(List.of(savedBook));
+        return savedBook;
     }
 
+    @Transactional
     public Book updateBook(Long id, Book updated) {
         Book existing = findById(id);
-        int copiesDelta = updated.getTotalCopies() - existing.getTotalCopies();
-
         existing.setTitle(updated.getTitle());
         existing.setAuthor(updated.getAuthor());
         existing.setIsbn(updated.getIsbn());
         existing.setCategory(updated.getCategory());
         existing.setPublisher(updated.getPublisher());
-        existing.setTotalCopies(updated.getTotalCopies());
-        // adjust available copies by the same delta so currently-issued copies stay consistent
-        existing.setAvailableCopies(Math.max(0, existing.getAvailableCopies() + copiesDelta));
+        existing.setPublicationYear(updated.getPublicationYear());
+        existing.setEdition(updated.getEdition());
+        existing.setSynopsis(updated.getSynopsis());
+        existing.setCoverImageUrl(updated.getCoverImageUrl());
+        existing.setLanguage(updated.getLanguage());
 
-        return bookRepository.save(existing);
+        Book saved = bookRepository.save(existing);
+        populateCopyCounts(List.of(saved));
+        return saved;
     }
 
+    @Transactional
     public void deleteById(Long id) {
-        bookRepository.deleteById(id);
+        Book book = findById(id);
+        bookRepository.delete(book);
     }
 
-    void decrementAvailableCopies(Book book) {
-        book.setAvailableCopies(book.getAvailableCopies() - 1);
-        bookRepository.save(book);
-    }
-
-    void incrementAvailableCopies(Book book) {
-        book.setAvailableCopies(Math.min(book.getTotalCopies(), book.getAvailableCopies() + 1));
-        bookRepository.save(book);
+    public void populateCopyCounts(List<Book> books) {
+        for (Book b : books) {
+            long total = bookCopyService.countTotalCopies(b);
+            long available = bookCopyService.countAvailableCopies(b);
+            b.setTotalCopies((int) total);
+            b.setAvailableCopies((int) available);
+        }
     }
 }

@@ -1,6 +1,5 @@
 package com.college.library.controller;
 
-import com.college.library.entity.Role;
 import com.college.library.entity.User;
 import com.college.library.service.*;
 import org.springframework.stereotype.Controller;
@@ -33,7 +32,7 @@ public class DashboardController {
         model.addAttribute("notifications", notificationService.forUser(user));
         model.addAttribute("unreadCount", notificationService.unreadCount(user));
 
-        if (user.getRole() == Role.ADMIN || user.getRole() == Role.LIBRARIAN) {
+        if (user.getRole().isStaffOrAdmin()) {
             model.addAttribute("totalBooks", reportService.totalBooks());
             model.addAttribute("totalCopies", reportService.totalCopies());
             model.addAttribute("totalUsers", reportService.totalUsers());

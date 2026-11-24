@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('Circulation Desk')}">
+    <title>Front Desk - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container">
+    <div class="flex-between">
+        <div>
+            <div class="page-title">Front-Desk Circulation Terminal</div>
+            <div class="page-subtitle">High-speed scan-to-issue and scan-to-return via barcode scanners or browser camera.</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a th:href="@{/transactions}" class="btn btn-secondary">All Transactions</a>
+            <a th:href="@{/admin/policies}" class="btn btn-secondary">Circulation Policies</a>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <!-- Terminal Mode Switcher -->
+    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+        <button id="issueTabBtn" onclick="switchTab('issue')" class="btn btn-primary" style="flex: 1; padding: 14px; font-size: 1.05rem;">
+            📤 Scan-to-Issue (F2)
+        </button>
+        <button id="returnTabBtn" onclick="switchTab('return')" class="btn btn-secondary" style="flex: 1; padding: 14px; font-size: 1.05rem;">
+            📥 Scan-to-Return (F4)
+        </button>
+    </div>
+
+    <div class="grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+        <!-- Left: Scan Form Panels -->
+        <div>
+            <!-- ISSUE PANEL -->
+            <div id="issuePanel" class="card" style="border-top: 4px solid var(--color-brand-navy);">
+                <div class="flex-between" style="margin-bottom: 16px;">
+                    <h3 style="margin: 0; color: var(--color-brand-navy); font-size: 1.25rem;">Scan-to-Issue</h3>
+                    <button type="button" onclick="startCameraScanner('copyBarcodeIssue')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 4px 10px;">
+                        📷 Use Camera Scanner
+                    </button>
+                </div>
+
+                <form th:action="@{/circulation/desk/scan-issue}" method="post" id="issueForm">
+                    <div class="form-group">
+                        <label for="patronIdentifier">1. Scan Patron Card or Email</label>
+                        <input type="text" id="patronIdentifier" name="patronIdentifier" 
+                               placeholder="Scan badge barcode or type student email..." 
+                               autocomplete="off" required autofocus>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="copyBarcodeIssue">2. Scan Physical Book Copy Barcode</label>
+                        <input type="text" id="copyBarcodeIssue" name="copyBarcode" 
+                               placeholder="e.g. BC-DEFAULT-1-001" 
+                               autocomplete="off" required>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">
+                            Supports USB Barcode Scanner (auto-submits on enter).
+                        </span>
+                        <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+                            Complete Issue &rarr;
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- RETURN PANEL -->
+            <div id="returnPanel" class="card" style="display: none; border-top: 4px solid var(--accent-success);">
+                <div class="flex-between" style="margin-bottom: 16px;">
+                    <h3 style="margin: 0; color: var(--accent-success); font-size: 1.25rem;">Scan-to-Return</h3>
+                    <button type="button" onclick="startCameraScanner('copyBarcodeReturn')" class="btn btn-secondary" style="font-size: 0.85rem; padding: 4px 10px;">
+                        📷 Use Camera Scanner
+                    </button>
+                </div>
+
+                <form th:action="@{/circulation/desk/scan-return}" method="post" id="returnForm">
+                    <div class="form-group">
+                        <label for="copyBarcodeReturn">Scan Book Copy Barcode to Return</label>
+                        <input type="text" id="copyBarcodeReturn" name="copyBarcode" 
+                               placeholder="Scan or enter book copy barcode (e.g. BC-DEFAULT-1-001)..." 
+                               autocomplete="off" required>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">
+                            Returns copy, assesses fines, and fulfills holding reservations.
+                        </span>
+                        <button type="submit" class="btn btn-gold" style="padding: 10px 24px;">
+                            Record Return &rarr;
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Embedded Camera Scanner Modal / Viewport -->
+            <div id="cameraScannerBox" class="card" style="display: none; background: #000; color: #fff; text-align: center; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-weight: 700; color: var(--color-brand-gold-light);">Live Camera Scanner</span>
+                    <button type="button" onclick="stopCameraScanner()" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.2rem;">✖</button>
+                </div>
+                <video id="cameraVideo" style="width: 100%; max-height: 260px; border-radius: 8px; background: #111;" autoplay playsinline></video>
+                <div style="font-size: 0.8rem; color: #aaa; margin-top: 8px;">Hold barcode in front of camera lens.</div>
+            </div>
+        </div>
+
+        <!-- Right: Desk Activity Stream -->
+        <div>
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--color-brand-navy); font-size: 1.15rem; margin-bottom: 16px;">Recent Desk Activity</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div th:each="t : ${recentTransactions}" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <strong th:text="${t.user.name}">Patron Name</strong>
+                            <span class="badge" th:classappend="${t.status.name() == 'ISSUED' ? 'badge-warning' : 'badge-success'}" th:text="${t.status}"></span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);" th:text="${t.book.title}">Book Title</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);" th:text="'Due: ' + ${t.dueDate}">Due Date</div>
+                    </div>
+                    <div th:if="${recentTransactions.empty}" style="color: var(--text-muted); font-size: 0.85rem;">
+                        No transactions recorded yet today.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+
+<script>
+    let activeCameraInputId = null;
+    let cameraStream = null;
+
+    function switchTab(mode) {
+        if (mode === 'issue') {
+            document.getElementById('issuePanel').style.display = 'block';
+            document.getElementById('returnPanel').style.display = 'none';
+            document.getElementById('issueTabBtn').className = 'btn btn-primary';
+            document.getElementById('returnTabBtn').className = 'btn btn-secondary';
+            document.getElementById('patronIdentifier').focus();
+        } else {
+            document.getElementById('issuePanel').style.display = 'none';
+            document.getElementById('returnPanel').style.display = 'block';
+            document.getElementById('issueTabBtn').className = 'btn btn-secondary';
+            document.getElementById('returnTabBtn').className = 'btn btn-primary';
+            document.getElementById('copyBarcodeReturn').focus();
+        }
+    }
+
+    // Keyboard Shortcuts: F2 for Issue, F4 for Return
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'F2') {
+            e.preventDefault();
+            switchTab('issue');
+        } else if (e.key === 'F4') {
+            e.preventDefault();
+            switchTab('return');
+        }
+    });
+
+    // Camera Barcode Scanner
+    async function startCameraScanner(targetInputId) {
+        activeCameraInputId = targetInputId;
+        const box = document.getElementById('cameraScannerBox');
+        const video = document.getElementById('cameraVideo');
+        box.style.display = 'block';
+
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = cameraStream;
+            detectBarcode(video);
+        } catch (err) {
+            alert("Camera access was not granted or is unavailable: " + err.message);
+            stopCameraScanner();
+        }
+    }
+
+    function stopCameraScanner() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        document.getElementById('cameraScannerBox').style.display = 'none';
+    }
+
+    async function detectBarcode(video) {
+        if ('BarcodeDetector' in window) {
+            const barcodeDetector = new BarcodeDetector({ formats: ['code_128', 'qr_code', 'ean_13', 'upc_a'] });
+            const interval = setInterval(async () => {
+                if (!cameraStream) { clearInterval(interval); return; }
+                try {
+                    const barcodes = await barcodeDetector.detect(video);
+                    if (barcodes.length > 0) {
+                        const code = barcodes[0].rawValue;
+                        document.getElementById(activeCameraInputId).value = code;
+                        stopCameraScanner();
+                        playBeep();
+                    }
+                } catch (e) {}
+            }, 300);
+        }
+    }
+
+    function playBeep() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.12);
+        } catch(e) {}
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+target/
+${project.build.directory}/
+*.class
+*.jar
+*.war
+*.ear
+
+# Local tools and cached maven
+.tools/
+
+# Logs
+*.log
+logs/
+
+# Sensitive tokens and environment configs
+.bootstrap-token
+.env
+.env.*
+*.key
+*.pem
+*.p12
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Node / Playwright test artifacts
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# OS files
+.DS_Store
+Thumbs.db

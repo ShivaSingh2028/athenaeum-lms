@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('Circulation Policies')}">
+    <title>Policy Engine - Athenaeum</title>
+</head>
+<body>
+<div th:replace="~{fragments :: nav}"></div>
+
+<div class="container">
+    <div class="flex-between">
+        <div>
+            <div class="page-title">Circulation Policy Engine</div>
+            <div class="page-subtitle">Configure loan limits, duration, renewal restrictions, and fine rates per membership tier.</div>
+        </div>
+        <div>
+            <a th:href="@{/admin/users}" class="btn btn-secondary">&larr; User Management</a>
+        </div>
+    </div>
+
+    <div class="alert alert-success" th:if="${param.success}">Policy rules updated successfully!</div>
+
+    <div class="grid" style="display: grid; gap: 20px;">
+        <div class="card" th:each="p : ${policies}">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-subtle); padding-bottom: 12px; margin-bottom: 16px;">
+                <div>
+                    <span class="badge badge-info" th:text="${p.code}" style="font-size: 0.85rem;">UG</span>
+                    <h3 style="display: inline-block; margin: 0 0 0 10px; color: var(--color-brand-navy);" th:text="${p.displayName}">Undergraduate</h3>
+                </div>
+                <div>
+                    <span class="badge" th:classappend="${p.active ? 'badge-success' : 'badge-danger'}" th:text="${p.active ? 'Active Tier' : 'Disabled'}"></span>
+                </div>
+            </div>
+
+            <form th:action="@{/admin/policies/{id}(id=${p.id})}" method="post">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label>Display Name</label>
+                        <input type="text" name="displayName" th:value="${p.displayName}" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Max Books Allowed</label>
+                        <input type="number" name="maxBooksAllowed" th:value="${p.maxBooksAllowed}" min="1" max="50" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Loan Duration (Days)</label>
+                        <input type="number" name="loanDurationDays" th:value="${p.loanDurationDays}" min="1" max="365" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Max Renewals</label>
+                        <input type="number" name="renewalLimit" th:value="${p.renewalLimit}" min="0" max="10" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Fine Rate (₹ / Day)</label>
+                        <input type="number" step="0.50" name="fineRatePerDay" th:value="${p.fineRatePerDay}" min="0" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Grace Period (Days)</label>
+                        <input type="number" name="gracePeriodDays" th:value="${p.gracePeriodDays}" min="0" max="30" required>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Max Fine Cap (₹)</label>
+                        <input type="number" step="10" name="fineCapAmount" th:value="${p.fineCapAmount}" min="0" required>
+                    </div>
+                    <div class="form-group" style="margin: 0; display: flex; align-items: center; gap: 8px; padding-top: 24px;">
+                        <input type="checkbox" id="activeChk" name="isActive" value="true" th:checked="${p.active}" style="width: auto;">
+                        <label for="activeChk" style="margin: 0; cursor: pointer;">Enable Rule Tier</label>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <button type="submit" class="btn btn-primary" style="padding: 6px 16px;">Save Rule Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
+</body>
+</html>

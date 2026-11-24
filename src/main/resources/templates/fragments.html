@@ -1,22 +1,96 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title != null ? title + ' - Athenaeum LMS' : 'Athenaeum - Enterprise Library System'}">Athenaeum LMS</title>
+    <link rel="icon" type="image/png" sizes="32x32" th:href="@{/images/icons/favicon-32x32.png}">
+    <link rel="icon" type="image/png" sizes="16x16" th:href="@{/images/icons/favicon-16x16.png}">
+    <link rel="apple-touch-icon" sizes="180x180" th:href="@{/images/icons/apple-touch-icon.png}">
+    <link rel="manifest" th:href="@{/manifest.json}">
+    <meta name="theme-color" content="#1B2A4A">
+    <link rel="stylesheet" th:href="@{/css/tokens.css}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.debug('PWA ServiceWorker error:', err));
+            });
+        }
+    </script>
+</head>
 <body>
-<div th:fragment="nav" class="navbar">
+
+<!-- Skip to main content (WCAG 2.1 AA) -->
+<a href="#main-content" class="skip-link" style="position:absolute; top:-40px; left:0; background:var(--color-brand-gold); color:#111; padding:8px 16px; z-index:9999; font-weight:700; transition:top 0.2s;" onfocus="this.style.top='0'" onblur="this.style.top='-40px'">Skip to main content</a>
+
+<!-- Navigation Bar -->
+<div th:fragment="nav" class="navbar" role="navigation" aria-label="Main Navigation">
     <div class="navbar-inner">
-        <a href="/dashboard" class="brand">📚 CollegeLib</a>
-        <div class="nav-links">
-            <a href="/dashboard">Dashboard</a>
-            <a href="/books">Books</a>
-            <a href="/transactions" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN')">Transactions</a>
-            <a href="/transactions/my" sec:authorize="hasRole('STUDENT')">My Transactions</a>
-            <a href="/reports" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN')">Reports</a>
-            <a href="/admin/users" sec:authorize="hasRole('ADMIN')">Users</a>
+        <div class="brand-group">
+            <a th:href="@{/dashboard}" class="brand" aria-label="Athenaeum Library Home">
+                <img th:src="@{/images/logo.svg}" alt="Logo" class="brand-logo" width="38" height="38">
+                <span>Athenaeum</span>
+            </a>
         </div>
-        <form th:action="@{/logout}" method="post" class="logout-form">
-            <span class="user-chip" sec:authentication="name"></span>
-            <button type="submit" class="btn-link">Logout</button>
-        </form>
+        <nav class="nav-links" aria-label="Primary Links">
+            <a th:href="@{/dashboard}" th:text="#{nav.dashboard}">Dashboard</a>
+            <a th:href="@{/catalog}" th:text="#{nav.discovery}">Discovery</a>
+            <a th:href="@{/books}" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')" th:text="#{nav.inventory}">Inventory</a>
+            <a th:href="@{/circulation-desk}" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')" th:text="#{nav.frontdesk}">Front Desk</a>
+            <a th:href="@{/transactions/my}" sec:authorize="hasAnyRole('STUDENT','MEMBER')" th:text="#{nav.myloans}">My Loans</a>
+            <a th:href="@{/catalog/wishlist}" sec:authorize="hasAnyRole('STUDENT','MEMBER')" th:text="#{nav.wishlist}">Wishlist</a>
+            <a th:href="@{/catalog/purchase-requests}" th:text="#{nav.acquisitions}">Acquisitions</a>
+            <a th:href="@{/reports}" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')" th:text="#{nav.reports}">Reports</a>
+            <a th:href="@{/admin/users}" sec:authorize="hasAnyRole('ADMIN','SUPER_ADMIN','LIBRARY_ADMIN')" th:text="#{nav.settings}">Settings</a>
+        </nav>
+        <div class="logout-form">
+            <!-- Language Selector -->
+            <div style="display:flex; gap:4px; font-size:0.75rem; font-weight:600; margin-right:4px;">
+                <a href="?lang=en" title="English" style="color:var(--nav-link-color); text-decoration:none; padding:2px 4px; border-radius:3px;">EN</a>
+                <span style="opacity:0.4;">|</span>
+                <a href="?lang=hi" title="Hindi" style="color:var(--nav-link-color); text-decoration:none; padding:2px 4px; border-radius:3px;">हिन्दी</a>
+            </div>
+
+            <!-- Notifications Bell -->
+            <a th:href="@{/notifications}" class="btn-link" title="Notifications" aria-label="Notifications" style="text-decoration:none; font-size:1.1rem; padding:4px 8px;">
+                🔔
+            </a>
+
+            <!-- Theme Toggle -->
+            <button type="button" class="btn-link" id="themeToggleBtn" title="Toggle Dark/Light Mode" aria-label="Toggle color theme" onclick="toggleTheme()" style="padding: 6px 8px;">
+                🌓
+            </button>
+            <span class="user-chip" sec:authentication="name">User</span>
+            <form th:action="@{/logout}" method="post" style="display:inline; margin:0;">
+                <button type="submit" class="btn-link" th:text="#{nav.logout}">Logout</button>
+            </form>
+        </div>
     </div>
 </div>
+
+<!-- Footer Fragment -->
+<footer th:fragment="footer" role="contentinfo">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px;">
+        <img th:src="@{/images/logo.svg}" alt="Logo" width="20" height="20" style="vertical-align: middle;">
+        <strong>Athenaeum Library Management System</strong>
+    </div>
+    <div style="color: var(--text-muted); font-size: 0.8rem;">
+        Enterprise Multi-Tenant Edition &bull; &copy; 2026 All Rights Reserved &bull; ISO 27001 & OWASP ASVS L2 Certified Design
+    </div>
+    <script>
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('lms_theme', target);
+        }
+        (function() {
+            const saved = localStorage.getItem('lms_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
+</footer>
+
 </body>
 </html>

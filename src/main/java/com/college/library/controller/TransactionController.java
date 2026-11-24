@@ -8,7 +8,7 @@ import com.college.library.service.UserService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import com.college.library.entity.Transaction;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/transactions")
@@ -31,53 +31,59 @@ public class TransactionController {
         model.addAttribute("books", bookService.findAll());
         return "transactions";
     }
-    /** A student's own full transaction history, separate from the dashboard's compact view. */
+
     @GetMapping("/my")
     public String myTransactions(Model model) {
         User user = userService.getCurrentUser();
         model.addAttribute("transactions", transactionService.findByUser(user));
         return "my-transactions";
     }
-    /** Student issues a book to themselves. */
+
     @PostMapping("/issue/{bookId}")
-    public String issueSelf(@PathVariable Long bookId, Model model) {
-        Book book = bookService.findById(bookId);
-        User user = userService.getCurrentUser();
+    public String issueSelf(@PathVariable Long bookId, RedirectAttributes redirectAttributes) {
         try {
+            Book book = bookService.findById(bookId);
+            User user = userService.getCurrentUser();
             transactionService.issueBook(book, user);
-        } catch (IllegalStateException e) {
-            model.addAttribute("error", e.getMessage());
+            redirectAttributes.addFlashAttribute("success", "Successfully borrowed \"" + book.getTitle() + "\"!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/books";
     }
 
-    /** Librarian/Admin issues a book to a specific user (by email) at the front desk. */
-    @PostMapping("/issue/{bookId}/to")
-    public String issueToUser(@PathVariable Long bookId, @RequestParam String email, Model model) {
-        Book book = bookService.findById(bookId);
-        User user = userService.findAll().stream()
-                .filter(u -> u.getEmail().equalsIgnoreCase(email))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No user with email " + email));
-        transactionService.issueBook(book, user);
-        return "redirect:/transactions";
+    @PostMapping("/{id}/renew")
+    public String renew(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            User user = userService.getCurrentUser();
+            transactionService.renewLoan(id, user);
+            redirectAttributes.addFlashAttribute("successMessage", "Loan renewed successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/transactions/my";
     }
 
     @PostMapping("/{id}/return")
-    public String returnBook(@PathVariable Long id) {
-        transactionService.returnBook(id);
+    public String returnBook(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            transactionService.returnBook(id);
+            redirectAttributes.addFlashAttribute("success", "Book return recorded.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/transactions";
     }
-    /** Students return their own borrowed book from their dashboard. */
+
     @PostMapping("/{id}/self-return")
-    public String selfReturn(@PathVariable Long id, Model model) {
-        Transaction t = transactionService.findById(id);
-        User currentUser = userService.getCurrentUser();
-        if (!t.getUser().getId().equals(currentUser.getId())) {
-            model.addAttribute("error", "You can only return books issued to your own account.");
-            return "redirect:/dashboard";
+    public String selfReturn(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            User user = userService.getCurrentUser();
+            transactionService.selfReturnBook(id, user);
+            redirectAttributes.addFlashAttribute("success", "Book returned successfully!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-        transactionService.returnBook(id);
         return "redirect:/dashboard";
     }
 

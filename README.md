@@ -91,3 +91,24 @@ spring.datasource.username=sa
 spring.datasource.password=
 ```
 The H2 driver is already included as a dependency in `pom.xml`.
+
+## Known Limitations & Untested Areas
+
+This project adheres to strict honesty criteria regarding operational readiness:
+
+| Capability | Status | Notes |
+|---|---|---|
+| **Live Razorpay Sandbox** | `IMPLEMENTED BUT UNTESTED` | HMAC-SHA256 signature verification and order creation implemented; live webhook roundtrips against external sandbox servers not executed. |
+| **Live SMTP Email Delivery** | `IMPLEMENTED BUT UNTESTED` | Asynchronous retry outbox queue and templates implemented; live dispatch through external third-party SMTP servers unverified. |
+| **Performance Benchmark (k6)** | `IMPLEMENTED BUT UNTESTED` | Script `load-test.js` configured with p95 <= 2.0s threshold; pending staging run. |
+| **Playwright E2E Browser Suite** | `IMPLEMENTED BUT UNTESTED` | Test suites created in `e2e/library-flows.spec.ts` covering Member, Librarian, and Admin journeys with screenshot captures; not run in live browser. |
+| **Testcontainers PostgreSQL Integration** | `IMPLEMENTED BUT UNTESTED` | Test classes written (`PostgreSqlFlywayValidationTest`, `RealDatabaseBusinessRulesTest`); pending first run on Ubuntu GitHub Actions runner. |
+| **Route Matrix Spring Security Tests** | `IMPLEMENTED BUT UNTESTED` | Test class `RouteMatrixSecurityTest` written; pending execution in CI. |
+| **Web Push Notifications** | `NOT DONE` | In-app notification center is active; Web Push (VAPID) is not implemented. |
+| **Sentry / Error Tracking** | `NOT DONE` | Sentry SDK not integrated into the runtime application build. |
+| **Automated Backups & Disaster Recovery** | `IMPLEMENTED BUT UNTESTED` | Documented and reproducible in `RUNBOOK_BACKUP_RESTORE.md` with SHA-256 checksums and verification queries; live drill not run. |
+| **OpenAPI / Swagger UI** | `IMPLEMENTED BUT UNTESTED` | Added to Maven `ci` profile for automated generation in CI. |
+| **Hindi i18n Translation** | `NOT DONE` | Core navigation labels exist; comprehensive domain translation is not done (~20% partial). |
+| **Staff TOTP 2FA Challenge** | `NOT DONE` | Database columns and QR secret generation exist; interactive login challenge filter in Spring Security is not implemented. |
+
+

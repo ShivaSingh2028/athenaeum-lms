@@ -1,64 +1,140 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head>
-    <meta charset="UTF-8">
-    <title>Books - CollegeLib</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+<head th:replace="~{fragments :: head('Catalog')}">
+    <title>Books - Athenaeum</title>
 </head>
 <body>
 <div th:replace="~{fragments :: nav}"></div>
 
-<div class="container">
-    <div class="flex-between">
+<div class="container" style="max-width:1200px; margin: 2rem auto;">
+    <div class="flex-between" style="margin-bottom: 1.5rem;">
         <div>
-            <div class="page-title">Book Catalog</div>
-            <div class="page-subtitle">Search and manage the library's collection.</div>
+            <h1 class="page-title" style="margin:0;">Library Inventory</h1>
+            <div class="page-subtitle">Manage bibliographic titles, inventory copies, and batch data exchange.</div>
         </div>
-        <a href="/books/new" class="btn btn-primary" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN')">+ Add Book</a>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <a href="/catalog" class="btn btn-secondary">
+                🔍 Patron Discovery
+            </a>
+            <a href="/books/export-csv" class="btn btn-outline" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')">
+                📥 Export CSV
+            </a>
+            <button onclick="document.getElementById('importModal').style.display='flex'" class="btn btn-secondary" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')">
+                📤 Import CSV
+            </button>
+            <a href="/books/new" class="btn btn-primary" sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')">
+                + Add Title
+            </a>
+        </div>
     </div>
 
+    <!-- Alerts -->
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-warning" th:if="${importWarning}" th:text="${importWarning}"></div>
+    <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
     <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
-    <form class="search-bar" method="get" th:action="@{/books}">
-        <input type="text" name="q" placeholder="Search by title, author, or ISBN..." th:value="${query}">
-        <button class="btn btn-secondary" type="submit">Search</button>
+    <form class="card" method="get" th:action="@{/books}" style="display: flex; gap: 12px; padding: 16px; margin-bottom: 20px;">
+        <input type="text" name="q" placeholder="Search by title, author, category, or ISBN..." th:value="${query}" style="flex: 1;">
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a th:if="${query != null && !query.blank}" th:href="@{/books}" class="btn btn-secondary">Clear</a>
     </form>
 
     <div class="card">
         <table>
             <thead>
             <tr>
-                <th>Title</th><th>Author</th><th>Category</th><th>Available</th><th>Actions</th>
+                <th>Title & Metadata</th>
+                <th>Author</th>
+                <th>Category</th>
+                <th>Availability</th>
+                <th>Actions</th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="b : ${books}">
-                <td th:text="${b.title}"></td>
-                <td th:text="${b.author}"></td>
-                <td th:text="${b.category}"></td>
-                <td th:text="${b.availableCopies + ' / ' + b.totalCopies}"></td>
                 <td>
-                    <span sec:authorize="hasRole('STUDENT')">
-                        <form th:if="${b.availableCopies > 0}" th:action="@{'/transactions/issue/' + ${b.id}}" method="post" style="display:inline;">
-                            <button class="btn btn-primary btn-sm" type="submit">Issue</button>
-                        </form>
-                        <form th:if="${b.availableCopies == 0}" th:action="@{'/reservations/reserve/' + ${b.id}}" method="post" style="display:inline;">
-                            <button class="btn btn-outline btn-sm" type="submit">Reserve</button>
-                        </form>
+                    <div style="font-weight: 700; color: var(--color-brand-navy); font-size: 1rem;" th:text="${b.title}"></div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);" th:text="'ISBN: ' + ${b.isbn} + (${b.publisher != null} ? ' &bull; ' + ${b.publisher} : '')"></div>
+                </td>
+                <td th:text="${b.author}"></td>
+                <td>
+                    <span class="badge badge-info" th:text="${b.category}"></span>
+                </td>
+                <td>
+                    <span class="badge" 
+                          th:classappend="${b.available ? 'badge-success' : 'badge-danger'}" 
+                          th:text="${b.availableCopies + ' / ' + b.totalCopies + ' Available'}">
                     </span>
-                    <span sec:authorize="hasAnyRole('ADMIN','LIBRARIAN')">
-                        <a th:href="@{'/books/' + ${b.id} + '/edit'}" class="btn btn-outline btn-sm">Edit</a>
-                        <form th:action="@{'/books/' + ${b.id} + '/delete'}" method="post" style="display:inline;"
-                              onsubmit="return confirm('Delete this book?');">
-                            <button class="btn btn-outline btn-sm" type="submit">Delete</button>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <!-- Student issue -->
+                        <form th:action="@{/transactions/issue/{id}(id=${b.id})}" method="post" 
+                              sec:authorize="hasAnyRole('STUDENT','MEMBER')" 
+                              th:if="${b.available}" style="display:inline; margin:0;">
+                            <button type="submit" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.85rem;">Borrow</button>
                         </form>
-                    </span>
+                        <!-- Reserve if unavailable -->
+                        <form th:action="@{/reservations/reserve/{id}(id=${b.id})}" method="post" 
+                              sec:authorize="hasAnyRole('STUDENT','MEMBER')" 
+                              th:unless="${b.available}" style="display:inline; margin:0;">
+                            <button type="submit" class="btn btn-gold" style="padding: 4px 10px; font-size: 0.85rem;">Reserve</button>
+                        </form>
+                        <!-- Staff View Copies -->
+                        <a th:href="@{/books/{id}/copies(id=${b.id})}" class="btn btn-secondary" 
+                           style="padding: 4px 10px; font-size: 0.85rem;" 
+                           sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')">
+                            Copies
+                        </a>
+                        <!-- Staff Edit -->
+                        <a th:href="@{/books/{id}/edit(id=${b.id})}" class="btn btn-secondary" 
+                           style="padding: 4px 10px; font-size: 0.85rem;" 
+                           sec:authorize="hasAnyRole('ADMIN','LIBRARIAN','SUPER_ADMIN','LIBRARY_ADMIN')">
+                            Edit
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            <tr th:if="${books.empty}">
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                    No books found matching your criteria.
                 </td>
             </tr>
             </tbody>
         </table>
-        <div class="empty-state" th:if="${#lists.isEmpty(books)}">No books match your search.</div>
     </div>
 </div>
+
+<!-- Modal: CSV Import -->
+<div id="importModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
+    <div class="card" style="max-width:550px; width:90%; padding:24px; border-radius:12px; background:var(--color-surface, #fff);">
+        <h3 style="margin-top:0; color:var(--color-brand-navy);">Bulk Catalog CSV Import</h3>
+        <p style="font-size:0.875rem; color:var(--text-muted);">
+            Upload a CSV file containing headers: <code>ISBN,Title,Author,Category,Publisher,PublicationYear,Copies,ShelfLocation</code>.
+        </p>
+
+        <form th:action="@{/books/import-csv}" method="post" enctype="multipart/form-data">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="font-weight:600; display:block; margin-bottom:6px;">Select CSV File</label>
+                <input type="file" name="file" accept=".csv" required style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px;">
+            </div>
+
+            <div style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="dryRunCheckbox" name="dryRun" value="true">
+                <label for="dryRunCheckbox" style="font-size:0.9rem; cursor:pointer;">
+                    <strong>Dry Run Validation:</strong> Validate headers and rows without modifying database
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="document.getElementById('importModal').style.display='none'" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Process Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments :: footer}"></div>
 </body>
 </html>
