@@ -14,6 +14,26 @@ services:
         fromDatabase:
           name: athenaeum-db
           property: connectionString
+      - key: PGHOST
+        fromDatabase:
+          name: athenaeum-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: athenaeum-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: athenaeum-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: athenaeum-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: athenaeum-db
+          property: password
       - key: APP_BOOTSTRAP_INITIAL_ADMIN_PASSWORD
         generateValue: true
 
