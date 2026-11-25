@@ -111,6 +111,13 @@ public class TenantFilter implements Filter {
         String domain = baseDomain != null && !baseDomain.isBlank() ? baseDomain.trim().toLowerCase() : "athenaeum.edu";
         String server = serverName.trim().toLowerCase();
 
+        // Cloud provider domains should NOT be treated as tenant subdomains
+        if (server.endsWith(".onrender.com") || server.endsWith(".railway.app") ||
+            server.endsWith(".up.railway.app") || server.endsWith(".fly.dev") ||
+            server.endsWith(".herokuapp.com")) {
+            return null;
+        }
+
         if (server.endsWith("." + domain)) {
             String sub = server.substring(0, server.length() - domain.length() - 1);
             if (!sub.isBlank() && !sub.equalsIgnoreCase("www") && !sub.equalsIgnoreCase("api")) {
@@ -121,11 +128,6 @@ public class TenantFilter implements Filter {
             String sub = server.substring(0, server.length() - ".localhost".length());
             if (!sub.isBlank() && !sub.equalsIgnoreCase("www") && !sub.equalsIgnoreCase("api")) {
                 return sub;
-            }
-        } else {
-            String[] parts = server.split("\\.");
-            if (parts.length >= 3 && !parts[0].equalsIgnoreCase("www") && !parts[0].equalsIgnoreCase("api")) {
-                return parts[0];
             }
         }
         return null;
